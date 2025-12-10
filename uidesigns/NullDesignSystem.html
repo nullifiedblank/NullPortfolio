@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NULL | Design System</title>
+    
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;900&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- RESET & VARIABLES --- */
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #000000;
+            --nav-bg: #111111;
+            --nav-text: #ffffff;
+            --card-bg: #f0f0f0;
+            --border-color: #ddd;
+        }
+
+        /* Dark Mode Variables */
+        body.dark-mode {
+            --bg-color: #0a0a0a;
+            --text-color: #e0e0e0;
+            --nav-bg: #000000;
+            --nav-text: #ffffff;
+            --card-bg: #1a1a1a;
+            --border-color: #333;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            overflow-x: hidden;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* Disable link interaction but keep cursor for hover hint */
+        a, .fake-link {
+            text-decoration: none;
+            color: inherit;
+            cursor: default; 
+            pointer-events: none; /* Make purely visual */
+        }
+        
+        /* Enable pointer events just for the toggle button */
+        #theme-toggle {
+            pointer-events: auto;
+            cursor: pointer;
+        }
+
+        /* --- UTILITY CLASSES --- */
+        .container {
+            max-width: 90%;
+            margin: 0 auto;
+        }
+
+        .uppercase {
+            text-transform: uppercase;
+        }
+
+        /* --- NAVIGATION --- */
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 2rem 5%; /* Align with container percentage */
+            background-color: var(--nav-bg);
+            color: var(--nav-text);
+        }
+
+        .logo {
+            font-weight: 900;
+            font-size: 1.5rem;
+            letter-spacing: -0.05em;
+            z-index: 10;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 3rem;
+            font-weight: 500;
+            font-size: 0.9rem;
+            z-index: 10;
+        }
+
+        .nav-item {
+            position: relative;
+            cursor: default; /* Not clickable */
+        }
+
+        .nav-item::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -5px;
+            left: 0;
+            background-color: var(--nav-text);
+            transition: width 0.3s ease;
+        }
+
+        .nav-item:hover::after {
+            width: 100%;
+        }
+
+        /* --- HERO SECTION --- */
+        .hero {
+            min-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            padding-top: 4rem;
+        }
+
+        .big-type {
+            font-size: 13vw;
+            line-height: 0.85;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: -0.06em;
+            color: var(--text-color);
+            position: relative;
+            z-index: 2;
+            pointer-events: none;
+            transition: color 0.3s ease;
+        }
+
+        .line-2 {
+            margin-left: 10vw; 
+            color: transparent;
+            -webkit-text-stroke: 2px var(--text-color);
+            transition: -webkit-text-stroke 0.3s ease;
+        }
+
+        .hero-sub {
+            margin-top: 2rem;
+            margin-left: 10vw;
+            max-width: 400px;
+            font-size: 1.1rem;
+            line-height: 1.5;
+            font-weight: 500;
+        }
+
+        .hero-visual {
+            position: absolute;
+            top: 10%;
+            right: 5%;
+            width: 40vw;
+            height: 60vh;
+            z-index: 1;
+            overflow: hidden;
+        }
+
+        .hero-visual img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: grayscale(100%);
+            transition: transform 1s ease, filter 0.5s ease;
+        }
+
+        /* Hover effect still works */
+        .hero:hover .hero-visual img {
+            transform: scale(1.05);
+            filter: grayscale(0%);
+        }
+
+        /* --- MARQUEE --- */
+        .marquee-container {
+            background: var(--text-color); /* Inverts in dark mode */
+            color: var(--bg-color);
+            padding: 1.5rem 0;
+            overflow: hidden;
+            white-space: nowrap;
+            margin: 4rem 0;
+            transform: rotate(-1deg) scale(1.02);
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        .marquee-content {
+            display: inline-block;
+            animation: marquee 20s linear infinite;
+            font-weight: 900;
+            font-size: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        @keyframes marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        /* --- DESIGN ASPECTS SECTION --- */
+        .work-section {
+            padding: 4rem 0 8rem 0;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 4rem;
+            border-bottom: 2px solid var(--text-color);
+            padding-bottom: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .section-title {
+            font-size: 4rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: -0.04em;
+            line-height: 1;
+        }
+
+        .project-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 4rem;
+        }
+
+        .project-card {
+            cursor: default; /* Changed from pointer */
+        }
+
+        .project-card:nth-child(even) {
+            margin-top: 6rem;
+        }
+
+        .project-img-wrapper {
+            width: 100%;
+            height: 500px;
+            overflow: hidden;
+            background: var(--card-bg);
+            position: relative;
+            margin-bottom: 1.5rem;
+            transition: background 0.3s ease;
+        }
+
+        .project-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
+            filter: grayscale(100%); /* Make images monochrome by default */
+        }
+
+        .project-card:hover .project-img {
+            transform: scale(1.1);
+            filter: grayscale(0%); /* Color on hover */
+        }
+
+        .project-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid var(--border-color);
+            padding-top: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .project-title {
+            font-size: 2rem;
+            font-weight: 900;
+            letter-spacing: -1px;
+            text-transform: uppercase;
+        }
+
+        .project-tags {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #888;
+            text-transform: uppercase;
+        }
+
+        /* --- FOOTER --- */
+        footer {
+            background-color: var(--nav-bg);
+            color: var(--nav-text);
+            padding: 6rem 0;
+            text-align: center;
+            transition: background 0.3s ease;
+        }
+
+        .footer-cta {
+            font-size: 8vw;
+            font-weight: 900;
+            letter-spacing: -0.05em;
+            line-height: 1;
+            margin-bottom: 2rem;
+            transition: color 0.3s ease;
+            cursor: default;
+        }
+
+        .footer-cta:hover {
+            -webkit-text-stroke: 2px var(--nav-text);
+            color: transparent;
+        }
+
+        .footer-meta {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            font-size: 1rem;
+            color: #888;
+        }
+
+        /* --- NIGHT MODE TOGGLE --- */
+        .theme-btn {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: var(--text-color);
+            color: var(--bg-color);
+            border: none;
+            font-weight: 900;
+            font-size: 0.8rem;
+            cursor: pointer;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            transition: transform 0.2s ease, background 0.3s ease, color 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-transform: uppercase;
+        }
+
+        .theme-btn:hover {
+            transform: scale(1.1);
+        }
+
+        /* --- RESPONSIVE --- */
+        @media (max-width: 768px) {
+            .big-type { font-size: 18vw; }
+            .line-2 { margin-left: 0; }
+            .hero-visual { position: relative; width: 100%; height: 300px; margin-top: 2rem; right: 0; }
+            .project-grid { grid-template-columns: 1fr; gap: 3rem; }
+            .project-card:nth-child(even) { margin-top: 0; }
+            .section-title { font-size: 2.5rem; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- NAV (Now Full Width Background) -->
+    <nav>
+        <div class="logo">NULL.</div>
+        <div class="nav-links">
+            <span class="nav-item">System</span>
+            <span class="nav-item">Grid</span>
+            <span class="nav-item">Type</span>
+        </div>
+    </nav>
+
+    <!-- HERO -->
+    <header class="hero container">
+        <div class="big-type">
+            <div>Visual</div>
+            <div class="line-2">Context</div>
+        </div>
+        
+        <div class="hero-sub">
+            <p>Deconstructing the interface. Nothing is clickable. Everything is intentional.</p>
+        </div>
+
+        <div class="hero-visual">
+            <!-- Abstract Architecture Image -->
+            <img src="https://images.unsplash.com/photo-1486718448742-163732cd1544?q=80&w=1974&auto=format&fit=crop" alt="Abstract Architecture">
+        </div>
+    </header>
+
+    <!-- MARQUEE BAR -->
+    <div class="marquee-container">
+        <div class="marquee-content">
+            NULL REFERENCE — VOID — NEGATIVE SPACE — #000000 — #FFFFFF — INTER — NULL REFERENCE — VOID — NEGATIVE SPACE — #000000 — #FFFFFF — INTER
+        </div>
+    </div>
+
+    <!-- WORK SECTION (REPURPOSED) -->
+    <section class="work-section container">
+        <div class="section-header">
+            <h2 class="section-title">Design<br>System (04)</h2>
+            <!-- Date removed as requested -->
+        </div>
+
+        <div class="project-grid">
+            
+            <!-- Aspect 1: Typography -->
+            <div class="project-card">
+                <div class="project-img-wrapper">
+                    <!-- Image of Text/Letters -->
+                    <img src="https://images.unsplash.com/photo-1555431189-0fabf2667795?q=80&w=2000&auto=format&fit=crop" class="project-img" alt="Typography">
+                </div>
+                <div class="project-meta">
+                    <h3 class="project-title">Typography</h3>
+                    <span class="project-tags">Inter / 900 / Tight</span>
+                </div>
+            </div>
+
+            <!-- Aspect 2: Structure/Grid -->
+            <div class="project-card">
+                <div class="project-img-wrapper">
+                    <!-- Image of structural lines/grid -->
+                    <img src="https://images.unsplash.com/photo-1544383835-bda2bc66a55d?q=80&w=2021&auto=format&fit=crop" class="project-img" alt="Grid">
+                </div>
+                <div class="project-meta">
+                    <h3 class="project-title">Structure</h3>
+                    <span class="project-tags">CSS Grid / Flex / 2-Col</span>
+                </div>
+            </div>
+
+            <!-- Aspect 3: Contrast -->
+            <div class="project-card">
+                <div class="project-img-wrapper">
+                    <!-- High contrast black and white image -->
+                    <img src="https://images.unsplash.com/photo-1507608616759-54f48f0af0ee?q=80&w=1974&auto=format&fit=crop" class="project-img" alt="Contrast">
+                </div>
+                <div class="project-meta">
+                    <h3 class="project-title">Contrast</h3>
+                    <span class="project-tags">#000000 / #FFFFFF</span>
+                </div>
+            </div>
+
+            <!-- Aspect 4: Scale -->
+            <div class="project-card">
+                <div class="project-img-wrapper">
+                    <!-- Image showing scale/grandeur -->
+                    <img src="https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?q=80&w=2074&auto=format&fit=crop" class="project-img" alt="Scale">
+                </div>
+                <div class="project-meta">
+                    <h3 class="project-title">Scale</h3>
+                    <span class="project-tags">13VW / Oversized</span>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer>
+        <div class="container">
+            <div class="footer-cta">NULL</div>
+            <div class="footer-meta">
+                <span>No Contact</span>
+                <span>No Socials</span>
+                <span>Pure Code</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- TOGGLE BUTTON -->
+    <button id="theme-toggle" class="theme-btn">
+        NIGHT
+    </button>
+
+    <script>
+        const toggleBtn = document.getElementById('theme-toggle');
+        const body = document.body;
+
+        toggleBtn.addEventListener('click', () => {
+            body.classList.toggle('dark-mode');
+            
+            // Update button text based on mode
+            if (body.classList.contains('dark-mode')) {
+                toggleBtn.textContent = "DAY";
+            } else {
+                toggleBtn.textContent = "NIGHT";
+            }
+        });
+    </script>
+
+</body>
+</html>
