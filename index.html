@@ -634,7 +634,7 @@
         const uiProjects = [
             { 
                 html: "OnlineJobsRedesign.html", 
-                img: "onlinejobs_thumb.png", // Make sure this image exists!
+                img: "onlinejobs_thumb.png", 
                 title: "OnlineJobs Redesign", 
                 subtitle: "Platform Revamp" 
             },
@@ -658,14 +658,37 @@
             }
         ];
 
+        // 2. Art Files (in 'art/' folder)
         const artFiles = [
-            "SampleImageFile.png",
-            "Digital_Canvas.png",
-            "Urban_Decay.png",
-            "Neon_Structure.png", 
-            "Abstract_Glitch.png" 
+            "a 2022.jfif",
+            "A Background Study 2022.jfif",
+            "Breathe 2025.jfif",
+            "Cake 2022.jfif",
+            "Clothing Test 2022.jfif",
+            "Draw your fairy 2022.jfif",
+            "Entranced 2022.jfif",
+            "Finally picked up the pen again 2025.jfif",
+            "Forest Spirit 2021.jfif",
+            "Forest Spirit REDRAW 2022.jfif",
+            "help 2022.png",
+            "Huh 2025.jfif",
+            "Nya 2023.jfif",
+            "Portrait A 2022.jfif",
+            "Queen 2021.jfif",
+            "Self Portrait 2022.jfif",
+            "Self Portrait 2023.jfif",
+            "Skin test 2025.jfif",
+            "Untitled 2 2023.jfif",
+            "Untitled 2022.jfif",
+            "Untitled 2023.jfif",
+            "Untitled 3 2023.jfif",
+            "Urara 2022.jfif",
+            "Vector A 2022.jfif",
+            "What 2025.jfif",
+            "Yugi Tsukasa 2023.jfif"
         ];
 
+        // 3. Graphic Files (in 'graphic/' folder)
         const graphicFiles = [
             "Nanumu_1.jpg",
             "Nanumu_2.jpg",
@@ -691,8 +714,8 @@
 
         function renderGalleries() {
             renderGrid('art-gallery-grid', 'art', artFiles, 'View Art', true);
-            // Updated folder name from 'graphic' to 'graphics'
-            renderGrid('graphic-design-grid', 'graphics', graphicFiles, 'View Design', false);
+            // Updated folder name from 'graphic' to 'graphics', set useModal to true
+            renderGrid('graphic-design-grid', 'graphics', graphicFiles, 'View Design', true);
             renderUIGrid();
             renderAppGrid(); 
             lucide.createIcons(); 
