@@ -667,10 +667,17 @@
         ];
 
         const graphicFiles = [
-            "sample.png",
-            "Echo_Rebrand.png", 
-            "Typography_Series.png",
-            "Minimalist_Poster.png" 
+            "Nanumu_1.jpg",
+            "Nanumu_2.jpg",
+            "The_Bar.jpg",
+            "Nanumu_3.jpg",
+            "2024_Wireless_Earphones.jpg",
+            "Heels.jpg",
+            "Margarita_Day_1.jpg",
+            "Margarita_Day_2.jpg",
+            "Margarita_Day_3.jpg",
+            "Margarita_Day_4.jpg",
+            "Margarita_Day_5.jpg"
         ];
 
         // ---------------------------------------------------------
@@ -684,9 +691,10 @@
 
         function renderGalleries() {
             renderGrid('art-gallery-grid', 'art', artFiles, 'View Art', true);
-            renderGrid('graphic-design-grid', 'graphic', graphicFiles, 'View Design', false);
+            // Updated folder name from 'graphic' to 'graphics'
+            renderGrid('graphic-design-grid', 'graphics', graphicFiles, 'View Design', false);
             renderUIGrid();
-            renderAppGrid(); // New function call
+            renderAppGrid(); 
             lucide.createIcons(); 
         }
 
