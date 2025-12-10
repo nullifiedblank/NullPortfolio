@@ -1,0 +1,2065 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OnlineJobs.ph Clone</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Lucide Icons (Vanilla JS - More stable for CDN usage) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        /* Custom Scrollbar for a cleaner look */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+    </style>
+</head>
+<body class="bg-slate-50">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- Lucide React Bridge ---
+        // This bridges the vanilla lucide library to React components to avoid UMD issues
+        const IconWrapper = ({ name, color = "currentColor", size = 24, strokeWidth = 2, className, ...props }) => {
+            const iconData = window.lucide.icons[name];
+            
+            if (!iconData) {
+                console.warn(`Icon "${name}" not found`);
+                return null;
+            }
+
+            // iconData is an array: [ ["tag", {attrs}], ["tag", {attrs}] ]
+            // We map this to React.createElement
+            const children = iconData.map((element, index) => {
+                const [tag, attrs] = element;
+                return React.createElement(tag, { ...attrs, key: index });
+            });
+
+            return (
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width={size}
+                    height={size}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke={color}
+                    strokeWidth={strokeWidth}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className={className}
+                    {...props}
+                >
+                    {children}
+                </svg>
+            );
+        };
+
+        // Create the icons object that the app expects
+        const iconNames = [
+            "Search", "MapPin", "Briefcase", "DollarSign", "CheckCircle", "Star", "Menu", "X", "Filter", 
+            "ChevronRight", "ChevronDown", "ChevronUp", "Users", "Shield", "Clock", "Heart", "Globe", 
+            "FileText", "MessageSquare", "CreditCard", "UserCheck", "HelpCircle", "AlertCircle", 
+            "SlidersHorizontal", "Bell", "LogOut", "User", "Settings", "FileStack", "Calendar", 
+            "GraduationCap", "Award", "Link", "Send", "Inbox", "MoreVertical", "Paperclip", 
+            "CornerUpLeft", "FileEdit", "Save", "Trash2", "Minus", "Plus", "AlertTriangle", "ExternalLink", 
+            "BookOpen", "Receipt", "Download", "Zap", "Lock", "Mail", "Eye", "EyeOff", "Camera"
+        ];
+
+        const lucideReact = {};
+        iconNames.forEach(name => {
+            lucideReact[name] = (props) => <IconWrapper name={name} {...props} />;
+        });
+        
+        // Handle alias
+        lucideReact.LinkIcon = lucideReact.Link;
+
+        // Destructure icons from our created object
+        const { 
+            Search, MapPin, Briefcase, DollarSign, CheckCircle, Star, Menu, X, Filter, 
+            ChevronRight, ChevronDown, ChevronUp, Users, Shield, Clock, Heart, Globe, 
+            FileText, MessageSquare, CreditCard, UserCheck, HelpCircle, AlertCircle, 
+            SlidersHorizontal, Bell, LogOut, User, Settings, FileStack, Calendar, 
+            GraduationCap, Award, LinkIcon, Send, Inbox, MoreVertical, Paperclip, 
+            CornerUpLeft, FileEdit, Save, Trash2, Minus, Plus, AlertTriangle, ExternalLink, 
+            BookOpen, Receipt, Download, Zap, Lock, Mail, Eye, EyeOff, Camera 
+        } = lucideReact;
+
+        // --- Mock Data ---
+
+        const INITIAL_DRAFTS = [
+            {
+                id: 201,
+                recipient: "Growth Property Solutions",
+                subject: "Application for Real Estate VA",
+                body: "Hi there, I noticed your job posting and...",
+                date: "Oct 26"
+            }
+        ];
+
+        const MESSAGES_DATA = {
+            inbox: [
+                {
+                    id: 1,
+                    sender: "TechFlow Inc. (HR)",
+                    avatar: "https://api.dicebear.com/7.x/initials/svg?seed=TF",
+                    subject: "Interview Invitation: Senior React Developer",
+                    preview: "Hi Jon, we were impressed by your profile and would like to schedule a technical interview...",
+                    date: "12/30 12:38 PM",
+                    read: false,
+                    body: "Hi Jon,\n\nWe were impressed by your profile and would like to schedule a technical interview for the Senior React Developer position. Are you available sometime this week?\n\nBest,\nSarah\nTechFlow HR"
+                },
+                {
+                    id: 2,
+                    sender: "Frieda",
+                    avatar: "https://api.dicebear.com/7.x/initials/svg?seed=Fr",
+                    subject: "Applicant",
+                    preview: "We have received your application...",
+                    date: "09/19 3:00 AM",
+                    read: false,
+                    body: "Hello, we received your application and would like to move forward."
+                },
+                {
+                    id: 3,
+                    sender: "Philipp S",
+                    avatar: "https://api.dicebear.com/7.x/initials/svg?seed=PS",
+                    subject: "Application",
+                    preview: "Thanks for applying...",
+                    date: "08/14 5:18 PM",
+                    read: false,
+                    body: "Hi, thanks for applying. We will review it shortly."
+                }
+            ],
+            sent: [
+                {
+                    id: 101,
+                    recipient: "TechFlow Inc. (HR)",
+                    avatar: "https://api.dicebear.com/7.x/initials/svg?seed=TF",
+                    subject: "Application for Senior React Developer",
+                    preview: "Hi, I am writing to express my interest in the Senior React Developer position...",
+                    date: "Oct 25",
+                    body: "Hi,\n\nI am writing to express my interest in the Senior React Developer position. I have 5 years of experience..."
+                }
+            ]
+        };
+
+        const JOBS = [
+            {
+                id: 1,
+                title: 'Real Estate Virtual Assistant',
+                company: 'Growth Property Solutions',
+                salary: '$600 - $900 / mo',
+                type: 'Full-time',
+                posted: '2 hours ago',
+                skills: ['Cold Calling', 'CRM', 'English C1'],
+                featured: true,
+                description: `We are looking for a dedicated Real Estate Virtual Assistant to join our growing team. The ideal candidate will have experience in the real estate industry, specifically with lead generation and CRM management.
+
+**Responsibilities:**
+- Cold calling leads and setting appointments.
+- Managing our CRM (kvCORE) and updating lead statuses.
+- Coordinating transaction documents.
+- responding to emails and social media inquiries.
+
+**Requirements:**
+- Proven experience as a Real Estate VA.
+- Excellent English communication skills (C1 level preferred).
+- Familiarity with US Real Estate terminologies.
+- Reliable internet connection and noise-canceling headset.
+
+**Benefits:**
+- Competitive salary.
+- 13th-month pay.
+- Paid time off.
+- Flexible working hours.`
+            },
+            {
+                id: 2,
+                title: 'Senior React Developer (Next.js)',
+                company: 'TechFlow Inc.',
+                salary: '$1,500 - $2,500 / mo',
+                type: 'Full-time',
+                posted: '5 hours ago',
+                skills: ['React', 'TypeScript', 'Tailwind'],
+                featured: true,
+                description: "We are seeking a Senior React Developer..."
+            },
+            {
+                id: 3,
+                title: 'Instagram Content Creator',
+                company: 'Beauty Brand Co.',
+                salary: '$400 - $600 / mo',
+                type: 'Part-time',
+                posted: '1 day ago',
+                skills: ['Canva', 'Reels', 'Copywriting'],
+                featured: false,
+                description: "Looking for a creative content creator..."
+            },
+            {
+                id: 4,
+                title: 'Shopify Store Manager',
+                company: 'Ecom Masters',
+                salary: '$800 - $1,200 / mo',
+                type: 'Full-time',
+                posted: '1 day ago',
+                skills: ['Shopify', 'Oberlo', 'Customer Support'],
+                featured: false,
+                description: "Manage our Shopify dropshipping store..."
+            },
+            {
+                id: 1342422,
+                title: 'Pixel Artist (for video games)',
+                company: 'Indie Games Studio',
+                salary: '$800 / mo',
+                type: 'Part-time',
+                posted: '25-Mar-25',
+                skills: ['Pixel Art', 'Animation'],
+                featured: false,
+                description: "Need a pixel artist..."
+            },
+            {
+                id: 1519843,
+                title: 'Graphic & Web Designer',
+                company: 'Creative Agency',
+                salary: '$1200 / mo',
+                type: 'Full-time',
+                posted: '23-Nov-25',
+                skills: ['Figma', 'Web Design'],
+                featured: false,
+                description: "Looking for a web designer..."
+            }
+        ];
+
+        const WORKERS = [
+            {
+                id: 1,
+                name: 'Maria C.',
+                role: 'Executive Virtual Assistant',
+                rate: '$8/hr',
+                rating: 4.9,
+                reviews: 24,
+                skills: ['Admin Support', 'Calendar Mgmt', 'Travel'],
+                img: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Maria',
+                verified: 98
+            },
+            {
+                id: 2,
+                name: 'John D.',
+                role: 'Full Stack Web Developer',
+                rate: '$15/hr',
+                rating: 5.0,
+                reviews: 12,
+                skills: ['PHP', 'Laravel', 'Vue.js'],
+                img: 'https://api.dicebear.com/7.x/avataaars/svg?seed=John',
+                verified: 95
+            },
+            {
+                id: 3,
+                name: 'Sarah L.',
+                role: 'Video Editor & Animator',
+                rate: '$10/hr',
+                rating: 4.8,
+                reviews: 45,
+                skills: ['Premiere Pro', 'After Effects'],
+                img: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah',
+                verified: 89
+            },
+        ];
+
+        const JOBSEEKER_FAQS = [
+            {
+                question: "How do I get paid?",
+                answer: "At OnlineJobs.ph, employers pay their workers directly, and not through our site. We don’t take a percentage of salary payments as a fee. So, how workers are paid is decided between employer and worker. Common methods include PayPal, Payoneer, Easypay, and Western Union."
+            },
+            {
+                question: "When do I get paid?",
+                answer: "It really depends on what you and your employer have agreed upon. Normally you will get paid either every 2 weeks or once a month. However, we do recommend that workers ask to be paid weekly when they are first hired to limit their risk of working with a new employer."
+            },
+            {
+                question: "How do I know this is legit?",
+                answer: "We've helped thousands of Filipinos get jobs with Foreign companies, and helped them work from home. OnlineJobs.ph is the largest Philippine job posting board, and it wouldn’t have been possible to grow to #1 by not being legit."
+            },
+            {
+                question: "Is this a \"business opportunity\"?",
+                answer: "NO. This is not a \"work from home\" scam or a \"typing for dollars\" thing. You will not be paid on commission. You will not have to pay anything to get a job. This will be a real job where you will get paid a set amount of money each month."
+            }
+        ];
+
+        // --- Atomic Components ---
+
+        const AccordionItem = ({ question, answer, isOpen, onClick }) => (
+            <div className="border border-slate-200 rounded-lg bg-white overflow-hidden transition-all hover:border-[#024570]/30">
+                <button 
+                    className={`w-full px-6 py-4 text-left flex justify-between items-center transition-colors ${isOpen ? 'bg-slate-50' : 'bg-white hover:bg-slate-50'}`}
+                    onClick={onClick}
+                >
+                    <span className={`font-semibold text-lg ${isOpen ? 'text-[#024570]' : 'text-slate-800'}`}>
+                        {question}
+                    </span>
+                    {isOpen ? <ChevronUp size={20} className="text-[#024570]" /> : <ChevronDown size={20} className="text-slate-400" />}
+                </button>
+                
+                {isOpen && (
+                    <div className="px-6 py-4 text-slate-600 border-t border-slate-100 bg-white leading-relaxed">
+                        {answer}
+                    </div>
+                )}
+            </div>
+        );
+
+        const WorkerCard = ({ worker }) => (
+            <div className="bg-white rounded-xl border border-slate-200 p-6 hover:shadow-lg transition-all cursor-pointer group">
+                <div className="flex items-start justify-between mb-4">
+                    <div className="relative">
+                        <img src={worker.img} alt={worker.name} className="w-16 h-16 rounded-full bg-slate-100" />
+                        <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5">
+                            <CheckCircle size={16} className="text-[#73B743] fill-white" />
+                        </div>
+                    </div>
+                    <div className="flex flex-col items-end">
+                        <span className="text-lg font-bold text-slate-900">{worker.rate}</span>
+                        <div className="flex items-center text-sm text-amber-500 mt-1">
+                            <Star size={14} className="fill-current" />
+                            <span className="ml-1 font-semibold text-slate-700">{worker.rating}</span>
+                            <span className="text-slate-400 ml-1">({worker.reviews})</span>
+                        </div>
+                    </div>
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 mb-1 group-hover:text-[#024570] transition-colors">{worker.name}</h3>
+                <p className="text-sm text-slate-500 mb-4">{worker.role}</p>
+                <div className="mb-4">
+                    <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+                        <span>ID Proof Score</span>
+                        <span className="font-semibold text-[#73B743]">{worker.verified}/100</span>
+                    </div>
+                    <div className="w-full bg-slate-100 rounded-full h-1.5">
+                        <div className="bg-[#73B743] h-1.5 rounded-full" style={{ width: `${worker.verified}%` }}></div>
+                    </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                    {worker.skills.slice(0, 3).map((skill, i) => (
+                        <span key={i} className="text-xs bg-slate-50 text-slate-600 px-2 py-1 rounded border border-slate-100">{skill}</span>
+                    ))}
+                </div>
+            </div>
+        );
+
+        const JobListing = ({ featuredOnly = false, onJobClick, bookmarkedJobs, toggleBookmark, jobs = null }) => {
+            const displayJobs = jobs ? jobs : (featuredOnly ? JOBS.slice(0, 2) : JOBS);
+            
+            return (
+                <div className="space-y-4">
+                    {displayJobs.map((job) => {
+                        const isBookmarked = bookmarkedJobs?.includes(job.id);
+                        return (
+                            <div 
+                                key={job.id} 
+                                className={`bg-white rounded-xl p-6 border ${job.featured ? 'border-[#024570]/20 bg-[#024570]/5' : 'border-slate-100'} hover:shadow-md transition-shadow cursor-pointer relative group`}
+                                onClick={() => onJobClick && onJobClick(job)}
+                            >
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                    <div className="flex-1 pr-4">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <h3 className="text-lg font-bold text-slate-900 group-hover:text-[#024570] transition-colors">{job.title}</h3>
+                                            {job.featured && <span className="bg-[#024570]/10 text-[#024570] text-xs px-2 py-0.5 rounded-full font-semibold">Featured</span>}
+                                        </div>
+                                        <div className="text-slate-500 text-sm mb-3">{job.company}</div>
+                                        <div className="flex flex-wrap gap-2">
+                                            {job.skills.map((skill, i) => (
+                                                <span key={i} className="text-xs font-medium text-slate-600 bg-slate-100 px-2 py-1 rounded">{skill}</span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-row md:flex-col items-center md:items-end justify-between border-t md:border-t-0 border-slate-100 pt-4 md:pt-0">
+                                        <div className="text-lg font-bold text-slate-900">{job.salary}</div>
+                                        <div className="flex items-center text-sm text-slate-500 mt-1">
+                                            <Clock size={14} className="mr-1" /> {job.posted}
+                                        </div>
+                                        <div className="hidden md:block mt-3">
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); toggleBookmark(job.id); }}
+                                                className={`p-2 rounded-full transition-colors ${isBookmarked ? 'bg-red-50 text-red-500' : 'bg-slate-50 text-slate-300 hover:text-red-400 hover:bg-red-50'}`}
+                                                title={isBookmarked ? "Remove from saved" : "Save job"}
+                                            >
+                                                <Heart size={20} className={isBookmarked ? "fill-current" : ""} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            );
+        };
+
+        const FilterModal = ({ isOpen, onClose, filters, setFilters }) => {
+            if (!isOpen) return null;
+
+            const handleJobTypeChange = (type) => {
+                setFilters(prev => {
+                    const isSelected = prev.jobTypes.includes(type);
+                    return {
+                        ...prev,
+                        jobTypes: isSelected 
+                            ? prev.jobTypes.filter(t => t !== type)
+                            : [...prev.jobTypes, type]
+                    };
+                });
+            };
+
+            const handleSalaryChange = (e, field) => {
+                setFilters(prev => ({
+                    ...prev,
+                    salary: { ...prev.salary, [field]: parseInt(e.target.value) || 0 }
+                }));
+            };
+
+            return (
+                <div className="fixed inset-0 z-[60] overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                    <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                        <div className="fixed inset-0 bg-slate-900 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={onClose}></div>
+                        <div className="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full">
+                            <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h3 className="text-xl font-bold text-slate-900" id="modal-title">Filter Jobs</h3>
+                                    <button onClick={onClose} className="text-slate-400 hover:text-slate-500">
+                                        <X size={24} />
+                                    </button>
+                                </div>
+                                <div className="mb-8">
+                                    <label className="block text-sm font-bold text-slate-900 mb-3">Job Type</label>
+                                    <div className="space-y-3">
+                                        {['Full-time', 'Part-time', 'Gig'].map((type) => (
+                                            <label key={type} className="flex items-center group cursor-pointer">
+                                                <input 
+                                                    type="checkbox" 
+                                                    className="w-5 h-5 rounded border-slate-300 text-[#024570] focus:ring-[#024570] cursor-pointer"
+                                                    checked={filters.jobTypes.includes(type)}
+                                                    onChange={() => handleJobTypeChange(type)}
+                                                />
+                                                <span className="ml-3 text-slate-700 group-hover:text-[#024570] transition-colors">{type}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="mb-6">
+                                    <label className="block text-sm font-bold text-slate-900 mb-4">Salary Range (USD)</label>
+                                    <div className="flex items-center gap-4 mb-6">
+                                        <div className="flex-1">
+                                            <label className="block text-xs text-slate-500 mb-1">Min Salary</label>
+                                            <div className="relative">
+                                                <span className="absolute left-3 top-2.5 text-slate-400">$</span>
+                                                <input 
+                                                    type="number" 
+                                                    value={filters.salary.min}
+                                                    onChange={(e) => handleSalaryChange(e, 'min')}
+                                                    className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-[#024570] focus:border-[#024570]"
+                                                    placeholder="0"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="text-slate-400">-</div>
+                                        <div className="flex-1">
+                                            <label className="block text-xs text-slate-500 mb-1">Max Salary</label>
+                                            <div className="relative">
+                                                <span className="absolute left-3 top-2.5 text-slate-400">$</span>
+                                                <input 
+                                                    type="number" 
+                                                    value={filters.salary.max}
+                                                    onChange={(e) => handleSalaryChange(e, 'max')}
+                                                    className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-[#024570] focus:border-[#024570]"
+                                                    placeholder="Any"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="px-2">
+                                        <input 
+                                            type="range" 
+                                            min="0" 
+                                            max="5000" 
+                                            step="100"
+                                            value={filters.salary.max || 0}
+                                            onChange={(e) => handleSalaryChange(e, 'max')}
+                                            className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#024570]"
+                                        />
+                                        <div className="flex justify-between text-xs text-slate-400 mt-2">
+                                            <span>$0</span>
+                                            <span>$5000+</span>
+                                        </div>
+                                        <p className="text-xs text-slate-400 mt-4 italic text-center">Enter 0 for "Any" salary.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-slate-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                                <button 
+                                    type="button" 
+                                    className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-[#024570] text-base font-medium text-white hover:bg-[#023e65] focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
+                                    onClick={onClose}
+                                >
+                                    Apply Filters
+                                </button>
+                                <button 
+                                    type="button" 
+                                    className="mt-3 w-full inline-flex justify-center rounded-lg border border-slate-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-slate-700 hover:bg-slate-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                                    onClick={() => setFilters({ jobTypes: [], salary: { min: 0, max: 0 } })}
+                                >
+                                    Reset
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const Dashboard = ({ setActiveTab, setProfileSubTab, profileImage }) => {
+            return (
+                <div className="bg-slate-50 min-h-screen pb-16">
+                    <div className="bg-[#024570] pt-12 pb-24">
+                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                            <div className="flex justify-between items-center text-white">
+                                <h1 className="text-2xl font-bold">My Account</h1>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-16">
+                        <div className="bg-[#fffdf5] border-l-4 border-amber-400 p-4 rounded-r-lg shadow-sm mb-6 flex items-start gap-3">
+                            <AlertTriangle className="text-amber-500 flex-shrink-0 mt-0.5" />
+                            <div className="text-sm text-slate-700">
+                                <h4 className="font-bold text-slate-900 mb-1">Safety First!</h4>
+                                <p>Any job that wants you to use your own money or handle funds from someone else is almost always a scam. <a href="#" className="underline text-[#024570]">Read all safety warnings.</a></p>
+                            </div>
+                        </div>
+                        <div className="bg-white rounded-xl shadow-md p-6 mb-8 border border-slate-200">
+                            <div className="flex flex-col md:flex-row gap-8">
+                                <div className="flex flex-col items-center flex-shrink-0">
+                                    <div className="relative">
+                                        {profileImage ? (
+                                            <img 
+                                                src={profileImage} 
+                                                alt="Profile" 
+                                                className="w-40 h-40 rounded-full border-4 border-white shadow-lg bg-slate-200 object-cover"
+                                            />
+                                        ) : (
+                                            <div className="w-40 h-40 rounded-full border-4 border-white shadow-lg bg-slate-200 flex items-center justify-center overflow-hidden">
+                                                <User size={120} className="text-slate-400 mt-8" fill="currentColor" />
+                                            </div>
+                                        )}
+                                        <button 
+                                            className="absolute bottom-2 right-2 bg-slate-800 text-white p-2 rounded-full hover:bg-slate-700 shadow-md"
+                                            onClick={() => { setActiveTab('profile'); setProfileSubTab('settings'); }}
+                                            title="Account Settings"
+                                        >
+                                            <Settings size={16} />
+                                        </button>
+                                    </div>
+                                    <div className="mt-4 flex flex-col gap-2 w-full">
+                                        <button 
+                                            onClick={() => { setActiveTab('profile'); setProfileSubTab('overview'); }}
+                                            className="w-full py-2 px-4 border border-[#024570] text-[#024570] rounded-full text-sm font-bold hover:bg-blue-50 transition-colors"
+                                        >
+                                            EDIT PROFILE
+                                        </button>
+                                        <button className="w-full py-2 px-4 bg-[#024570] text-white rounded-full text-sm font-bold hover:bg-[#023e65] transition-colors flex items-center justify-center gap-2">
+                                            <Shield size={14} /> VERIFICATION
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="flex-1">
+                                    <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
+                                        <div>
+                                            <h2 className="text-3xl font-bold text-slate-900">Jon Craig Cabug Bilag</h2>
+                                            <p className="text-lg text-[#024570] font-medium">Customer Service Specialist</p>
+                                        </div>
+                                        <div className="mt-4 md:mt-0 inline-flex items-center px-4 py-1.5 rounded-full bg-[#73B743]/10 border border-[#73B743]/20">
+                                            <span className="text-2xl font-bold text-[#73B743] mr-2">45</span>
+                                            <span className="text-xs font-bold text-[#73B743] uppercase tracking-wide">ID Proof</span>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-slate-100 pt-6">
+                                        <div>
+                                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Salary Preference</h4>
+                                            <p className="text-slate-800 text-sm leading-relaxed">
+                                                Looking for <strong>Full-time</strong> work (8 hours/day)<br/>
+                                                at <strong>₱200.00/hour</strong> (₱35,200.00/month)
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Education</h4>
+                                            <p className="text-slate-800 text-sm">High school diploma</p>
+                                        </div>
+                                    </div>
+                                    <div className="mt-6">
+                                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Top Skills</h4>
+                                        <div className="flex flex-wrap gap-2">
+                                            {['Art & Comic Design', 'Customer Support', 'Technical Support'].map(skill => (
+                                                <span key={skill} className="bg-slate-100 text-slate-700 px-3 py-1 rounded-md text-sm font-medium">
+                                                    {skill}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                                <div className="bg-[#024570] px-5 py-4 flex justify-between items-center">
+                                    <h3 className="text-white font-bold text-sm uppercase flex items-center gap-2">
+                                        <MessageSquare size={18} /> Unread Messages
+                                    </h3>
+                                    <button onClick={() => setActiveTab('messages')} className="text-white/80 text-xs font-bold uppercase hover:text-white flex items-center gap-1">
+                                        View All <ChevronRight size={14} />
+                                    </button>
+                                </div>
+                                <div className="divide-y divide-slate-100">
+                                    {MESSAGES_DATA.inbox.filter(m => !m.read).map(msg => (
+                                        <div key={msg.id} className="p-4 hover:bg-slate-50 transition-colors flex items-center gap-4 cursor-pointer" onClick={() => setActiveTab('messages')}>
+                                            <div className="w-10 h-10 rounded-full bg-slate-200 flex-shrink-0 overflow-hidden">
+                                                <img src={msg.avatar} alt="" className="w-full h-full object-cover" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex justify-between items-baseline">
+                                                    <p className="text-sm font-bold text-slate-900 truncate">{msg.sender}</p>
+                                                    <span className="text-xs text-slate-400">{msg.date}</span>
+                                                </div>
+                                                <p className="text-xs text-[#024570] font-medium truncate">{msg.subject}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                                <div className="bg-[#024570] px-5 py-4 flex justify-between items-center">
+                                    <h3 className="text-white font-bold text-sm uppercase flex items-center gap-2">
+                                        <Heart size={18} /> Saved Jobs
+                                    </h3>
+                                    <button onClick={() => setActiveTab('saved-jobs')} className="text-white/80 text-xs font-bold uppercase hover:text-white flex items-center gap-1">
+                                        View All <ChevronRight size={14} />
+                                    </button>
+                                </div>
+                                <div className="divide-y divide-slate-100">
+                                    {JOBS.slice(4, 6).map(job => (
+                                        <div key={job.id} className="p-4 hover:bg-slate-50 transition-colors flex items-center justify-between cursor-pointer" onClick={() => setActiveTab('saved-jobs')}>
+                                            <div>
+                                                <p className="text-sm font-bold text-slate-900">{job.title}</p>
+                                                <p className="text-xs text-slate-500">{job.company}</p>
+                                            </div>
+                                            <span className="text-xs font-bold text-[#024570]">View Post</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+                            <div className="bg-white p-6 rounded-xl border-l-4 border-[#024570] shadow-sm flex items-start gap-4">
+                                <FileText size={32} className="text-[#024570] flex-shrink-0" />
+                                <div>
+                                    <h4 className="font-bold text-slate-900 mb-1">Process How-Tos</h4>
+                                    <p className="text-sm text-slate-600 mb-3">Is there an effective process you’re good at? Create a Standard Operating Procedure (SOP) and earn up to $500.</p>
+                                    <a href="#" className="text-xs font-bold text-[#024570] uppercase hover:underline">Learn More</a>
+                                </div>
+                            </div>
+                            <div className="bg-white p-6 rounded-xl border-l-4 border-[#024570] shadow-sm flex items-start gap-4">
+                                <BookOpen size={32} className="text-[#024570] flex-shrink-0" />
+                                <div>
+                                    <h4 className="font-bold text-slate-900 mb-1">Essential Education</h4>
+                                    <p className="text-sm text-slate-600 mb-3">How to work for a foreign Boss: 16 Things You Need To Know</p>
+                                    <a href="#" className="text-xs font-bold text-[#024570] uppercase hover:underline">Read Article</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="bg-[#024570] rounded-xl p-10 text-center mt-12 mb-12 shadow-lg">
+                            <h2 className="text-3xl font-bold text-white mb-2">Looking for a job?</h2>
+                            <p className="text-blue-100 mb-8">1000’s of Employers are looking to hire right now!</p>
+                            <button 
+                                onClick={() => setActiveTab('jobs')}
+                                className="bg-[#73B743] text-white px-8 py-3 rounded-full font-bold shadow-lg hover:brightness-110 transition-transform transform hover:-translate-y-1"
+                            >
+                                VIEW JOB BOARD
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const Profile = ({ subTab, setSubTab, profileImage, setProfileImage }) => {
+            const [showPassword, setShowPassword] = useState(false);
+            const fileInputRef = useRef(null);
+
+            const handleImageUpload = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const imageUrl = URL.createObjectURL(file);
+                    setProfileImage(imageUrl);
+                }
+            };
+
+            return (
+                <div className="bg-slate-50 min-h-screen pb-20">
+                    <div className="bg-[#024570] pt-12 pb-20">
+                        <div className="max-w-5xl mx-auto px-4">
+                        </div>
+                    </div>
+                    <div className="max-w-5xl mx-auto px-4 -mt-16">
+                        <div className="bg-white rounded-xl shadow-lg p-6 md:p-8 flex flex-col md:flex-row items-center md:items-start gap-6 border border-slate-100 mb-6">
+                            <div className="relative flex-shrink-0 group">
+                                {profileImage ? (
+                                    <img 
+                                        src={profileImage} 
+                                        alt="Jon Craig B."
+                                        className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-white shadow-md bg-slate-200 object-cover"
+                                    />
+                                ) : (
+                                    <div className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-white shadow-md bg-slate-200 flex items-center justify-center overflow-hidden">
+                                        <User size={100} className="text-slate-400 mt-6 md:mt-8 md:scale-110" fill="currentColor" />
+                                    </div>
+                                )}
+                                
+                                {/* Edit Picture Button */}
+                                <button 
+                                    onClick={() => fileInputRef.current.click()}
+                                    className="absolute bottom-2 right-2 bg-slate-800 text-white p-2 rounded-full hover:bg-slate-700 shadow-md z-10 transition-transform transform hover:scale-105"
+                                    title="Change Profile Picture"
+                                >
+                                    <Camera size={16} />
+                                </button>
+                                <input 
+                                    type="file" 
+                                    ref={fileInputRef} 
+                                    onChange={handleImageUpload} 
+                                    className="hidden" 
+                                    accept="image/*"
+                                />
+
+                                {/* Verification Badge */}
+                                {!profileImage && (
+                                    <div className="absolute top-0 right-0 bg-white rounded-full p-1 shadow-sm border border-slate-100">
+                                        <CheckCircle size={20} className="text-[#73B743] fill-white" />
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex-1 text-center md:text-left mt-2">
+                                <h1 className="text-3xl font-bold text-slate-900 mb-1">Jon Craig B.</h1>
+                                <h2 className="text-xl text-slate-500 font-medium mb-4">Customer Service Specialist</h2>
+                                <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mb-6">
+                                    <div className="flex items-center bg-[#73B743]/10 px-3 py-1 rounded-full border border-[#73B743]/20">
+                                        <Shield size={14} className="text-[#73B743] mr-1.5" />
+                                        <span className="text-xs font-bold text-[#73B743]">ID PROOF: 45</span>
+                                    </div>
+                                    <div className="flex items-center bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
+                                        <Clock size={14} className="text-blue-600 mr-1.5" />
+                                        <span className="text-xs font-bold text-blue-600">TIMEPROOF ENABLED</span>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 border-t border-slate-100 pt-6">
+                                    <div>
+                                        <p className="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">Rate</p>
+                                        <p className="text-lg font-bold text-slate-900">₱200.00<span className="text-xs text-slate-400 font-normal">/hr</span></p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">Salary</p>
+                                        <p className="text-lg font-bold text-slate-900">₱35,200<span className="text-xs text-slate-400 font-normal">/mo</span></p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">Availability</p>
+                                        <p className="text-lg font-bold text-slate-900">Full Time</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">Hours</p>
+                                        <p className="text-lg font-bold text-slate-900">8 hrs<span className="text-xs text-slate-400 font-normal">/day</span></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Tab Navigation */}
+                        <div className="flex border-b border-slate-200 mb-6 space-x-8">
+                            <button 
+                                onClick={() => setSubTab('overview')}
+                                className={`pb-4 text-sm font-bold border-b-2 transition-colors ${subTab === 'overview' ? 'border-[#024570] text-[#024570]' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                            >
+                                Overview
+                            </button>
+                            <button 
+                                onClick={() => setSubTab('settings')}
+                                className={`pb-4 text-sm font-bold border-b-2 transition-colors ${subTab === 'settings' ? 'border-[#024570] text-[#024570]' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                            >
+                                Account Settings
+                            </button>
+                        </div>
+
+                        {subTab === 'overview' ? (
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6 animate-in fade-in duration-300">
+                                <div className="space-y-6">
+                                    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                                        <h3 className="font-bold text-slate-900 mb-4 flex items-center">
+                                            <User size={18} className="text-[#024570] mr-2" /> Overview
+                                        </h3>
+                                        <ul className="space-y-4 text-sm">
+                                            <li className="flex items-start">
+                                                <Calendar size={16} className="text-slate-400 mr-3 mt-0.5" />
+                                                <div>
+                                                    <p className="font-bold text-slate-700">Member Since</p>
+                                                    <p className="text-slate-500">September 3rd, 2023</p>
+                                                </div>
+                                            </li>
+                                            <li className="flex items-start">
+                                                <GraduationCap size={16} className="text-slate-400 mr-3 mt-0.5" />
+                                                <div>
+                                                    <p className="font-bold text-slate-700">Education</p>
+                                                    <p className="text-slate-500">High school diploma</p>
+                                                </div>
+                                            </li>
+                                            <li className="flex items-start">
+                                                <User size={16} className="text-slate-400 mr-3 mt-0.5" />
+                                                <div>
+                                                    <p className="font-bold text-slate-700">Demographics</p>
+                                                    <p className="text-slate-500">22 yrs old • Male</p>
+                                                </div>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                                        <h3 className="font-bold text-slate-900 mb-4 flex items-center">
+                                            <Award size={18} className="text-[#024570] mr-2" /> Top Skills
+                                        </h3>
+                                        <div className="space-y-5">
+                                            {[
+                                                { name: 'Art & Comic Design', rating: 5, exp: '2 - 5 years' },
+                                                { name: 'Customer Support', rating: 5, exp: '1 - 2 years' },
+                                                { name: 'Technical Support', rating: 4, exp: '1 - 2 years' },
+                                            ].map((skill, i) => (
+                                                <div key={i}>
+                                                    <div className="flex justify-between items-center mb-1">
+                                                        <span className="font-medium text-slate-800 text-sm">{skill.name}</span>
+                                                        <div className="flex">
+                                                            {[...Array(5)].map((_, starI) => (
+                                                                <Star 
+                                                                    key={starI} 
+                                                                    size={12} 
+                                                                    className={`${starI < skill.rating ? 'fill-amber-400 text-amber-400' : 'fill-slate-100 text-slate-200'}`} 
+                                                                />
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                    <p className="text-xs text-slate-400">{skill.exp} experience</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="mt-6 pt-4 border-t border-slate-100 text-center">
+                                            <a href="#" className="text-[#024570] text-sm font-bold hover:underline">View All Skills</a>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="md:col-span-2 space-y-6">
+                                    <div className="bg-white p-8 rounded-xl border border-slate-200 shadow-sm">
+                                        <h3 className="font-bold text-xl text-slate-900 mb-4">About Me</h3>
+                                        <div className="prose prose-slate text-slate-600 leading-relaxed">
+                                            <p className="mb-4">
+                                                Hello, I'm Jon Craig Bilag, bringing a dynamic fusion of customer service prowess and a Computer Science background. 
+                                            </p>
+                                            <p>
+                                                My journey marries effective communication from my customer service experience with technical finesse, offering a versatile skill set. This unique blend positions me as a strong candidate for roles in tech support or customer-centric positions within the tech industry.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="bg-white p-8 rounded-xl border border-slate-200 shadow-sm">
+                                        <h3 className="font-bold text-xl text-slate-900 mb-4">Portfolio</h3>
+                                        <div className="p-4 bg-slate-50 border border-slate-100 rounded-lg text-center text-slate-500 italic">
+                                            <LinkIcon size={32} className="mx-auto mb-2 text-slate-300" />
+                                            No portfolio website specified
+                                        </div>
+                                    </div>
+                                    <div className="bg-white p-8 rounded-xl border border-slate-200 shadow-sm">
+                                        <h3 className="font-bold text-xl text-slate-900 mb-4">Tests Taken</h3>
+                                        <div className="border border-slate-200 rounded-lg overflow-hidden">
+                                            <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
+                                                <span className="font-bold text-slate-700">English Proficiency</span>
+                                                <span className="bg-emerald-100 text-emerald-700 text-xs px-2 py-1 rounded font-bold">VERIFIED</span>
+                                            </div>
+                                            <div className="p-6 flex items-center justify-between">
+                                                <div>
+                                                    <p className="text-sm text-slate-500 uppercase tracking-wide font-semibold mb-1">Result</p>
+                                                    <p className="text-xl font-bold text-[#024570]">B2 (Upper Intermediate)</p>
+                                                </div>
+                                                <div className="w-12 h-12 bg-slate-100 rounded flex items-center justify-center text-slate-400 hover:bg-slate-200 cursor-pointer transition-colors" title="View Screenshot">
+                                                    <FileText size={20} />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="max-w-3xl mx-auto animate-in fade-in duration-300">
+                                {/* Email Card */}
+                                <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-6 mb-6">
+                                    <div className="flex items-center gap-4 mb-4">
+                                        <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-[#024570]">
+                                            <Mail size={20} />
+                                        </div>
+                                        <div>
+                                            <h2 className="text-lg font-bold text-slate-900">Email Address</h2>
+                                            <p className="text-slate-500 text-sm">Your verified email address.</p>
+                                        </div>
+                                    </div>
+                                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                        <span className="font-bold text-slate-700">craigbilag@gmail.com</span>
+                                        <button className="text-[#024570] font-bold text-sm hover:underline hover:text-[#023e65]">Change</button>
+                                    </div>
+                                </div>
+
+                                {/* Password Card */}
+                                <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-6">
+                                    <div className="flex items-center gap-4 mb-6">
+                                        <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-[#024570]">
+                                            <Lock size={20} />
+                                        </div>
+                                        <div>
+                                            <h2 className="text-lg font-bold text-slate-900">Security</h2>
+                                            <p className="text-slate-500 text-sm">Update your password to keep your account safe.</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <form className="space-y-5 max-w-lg">
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 mb-2">Current Password</label>
+                                            <div className="relative">
+                                                <input type={showPassword ? "text" : "password"} className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#024570] focus:border-transparent outline-none transition-all" />
+                                                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-slate-400 hover:text-slate-600">
+                                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-bold text-slate-700 mb-2">New Password</label>
+                                            <div className="relative">
+                                                <input type={showPassword ? "text" : "password"} className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#024570] focus:border-transparent outline-none transition-all" />
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="pt-2">
+                                            <button className="bg-[#024570] text-white px-6 py-3 rounded-lg font-bold hover:bg-[#023e65] transition-colors shadow-md">
+                                                Change Password
+                                            </button>
+                                            <div className="mt-4 text-sm">
+                                                <a href="#" className="text-slate-500 hover:text-[#024570] underline">Forgot your password?</a>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const HowItWorks = ({ setActiveTab }) => {
+            const steps = [
+                {
+                    icon: User,
+                    title: "Create an Account",
+                    desc: "Sign up as a job seeker. It's free and takes less than a minute. Fill out your profile with your skills, experience, and expected salary."
+                },
+                {
+                    icon: Search,
+                    title: "Search for Jobs",
+                    desc: "Browse thousands of job listings from employers worldwide. Use filters to find jobs that match your skills and salary expectations."
+                },
+                {
+                    icon: Send,
+                    title: "Apply for Jobs",
+                    desc: "Found a job you like? Apply directly to the employer. You can negotiate your salary, working hours, and payment terms."
+                },
+                {
+                    icon: Briefcase,
+                    title: "Get Hired",
+                    desc: "If the employer likes your profile, they will contact you for an interview. Once hired, you work directly for them."
+                }
+            ];
+
+            const [openFaq, setOpenFaq] = useState(null);
+
+            return (
+                <div className="bg-slate-50 min-h-screen pb-20">
+                    <div className="bg-[#024570] pt-12 pb-24">
+                        <div className="max-w-5xl mx-auto px-4 text-center">
+                            <h1 className="text-3xl md:text-4xl font-bold text-white mb-4">How it Works</h1>
+                            <p className="text-blue-100 text-lg max-w-2xl mx-auto">
+                                OnlineJobs.ph is the largest and safest marketplace for finding Filipino virtual assistants and specialists.
+                            </p>
+                        </div>
+                    </div>
+                    <div className="max-w-6xl mx-auto px-4 -mt-12">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+                            {steps.map((step, idx) => (
+                                <div key={idx} className="bg-white rounded-xl shadow-lg p-8 flex flex-col items-center text-center border border-slate-100 relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300">
+                                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#024570] to-[#73B743]"></div>
+                                    <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center text-[#024570] mb-6 group-hover:bg-[#024570] group-hover:text-white transition-colors">
+                                        <step.icon size={32} />
+                                    </div>
+                                    <h3 className="text-xl font-bold text-slate-900 mb-3">{step.title}</h3>
+                                    <p className="text-slate-600 text-sm leading-relaxed">{step.desc}</p>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 md:p-12 flex flex-col md:flex-row items-center gap-12 mb-16">
+                            <div className="flex-1">
+                                <span className="text-[#73B743] font-bold tracking-wider uppercase text-sm mb-2 block">Why Choose Us?</span>
+                                <h2 className="text-3xl font-bold text-slate-900 mb-6">We don't take a cut of your salary.</h2>
+                                <div className="space-y-4">
+                                    <div className="flex gap-4">
+                                        <div className="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0 text-green-700">
+                                            <DollarSign size={24} />
+                                        </div>
+                                        <div>
+                                            <h4 className="font-bold text-slate-900">Zero Fees</h4>
+                                            <p className="text-slate-600 text-sm">We don't mark up your salary. You get paid what the employer pays.</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-4">
+                                        <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0 text-blue-700">
+                                            <Zap size={24} />
+                                        </div>
+                                        <div>
+                                            <h4 className="font-bold text-slate-900">Direct Hires</h4>
+                                            <p className="text-slate-600 text-sm">Communicate and work directly with your employer. No middleman.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex-1 bg-slate-100 rounded-2xl p-8 text-center">
+                                <h3 className="text-2xl font-bold text-slate-900 mb-4">Ready to start?</h3>
+                                <p className="text-slate-600 mb-8">Join over 2 million job seekers finding work from home.</p>
+                                <button 
+                                    onClick={() => setActiveTab('jobs')}
+                                    className="bg-[#024570] text-white px-8 py-3 rounded-full font-bold shadow-lg hover:bg-[#023e65] transition-colors w-full md:w-auto"
+                                >
+                                    Find a Job Now
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="max-w-3xl mx-auto mb-16">
+                            <h2 className="text-2xl font-bold text-slate-900 text-center mb-8">Frequently Asked Questions</h2>
+                            <div className="space-y-4">
+                                {JOBSEEKER_FAQS.map((faq, idx) => (
+                                    <AccordionItem 
+                                        key={idx}
+                                        question={faq.question}
+                                        answer={faq.answer}
+                                        isOpen={openFaq === idx}
+                                        onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const Messages = ({ drafts = [] }) => {
+            const [activeTab, setActiveTab] = useState('inbox');
+            const [searchQuery, setSearchQuery] = useState('');
+            
+            const currentMessages = activeTab === 'drafts' ? drafts : MESSAGES_DATA[activeTab];
+            
+            const filteredMessages = currentMessages.filter(msg => {
+                const query = searchQuery.toLowerCase();
+                const otherParty = activeTab === 'inbox' ? (msg.sender || '') : (msg.recipient || '');
+                return (
+                    otherParty.toLowerCase().includes(query) ||
+                    (msg.subject || '').toLowerCase().includes(query) ||
+                    (msg.preview || '').toLowerCase().includes(query) ||
+                    (msg.body || '').toLowerCase().includes(query)
+                );
+            });
+
+            return (
+                <div className="bg-slate-50 min-h-screen pb-20">
+                    <div className="bg-white border-b border-slate-200">
+                        <div className="max-w-5xl mx-auto px-4 py-6">
+                            <h1 className="text-2xl font-bold text-slate-900">Messages</h1>
+                        </div>
+                    </div>
+                    <div className="max-w-5xl mx-auto px-4 py-8">
+                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col md:flex-row min-h-[600px]">
+                            <div className="w-full md:w-64 bg-slate-50 border-b md:border-b-0 md:border-r border-slate-200 p-4 flex flex-col">
+                                <div className="space-y-1">
+                                    <button onClick={() => setActiveTab('inbox')} className={`w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 font-medium transition-colors ${activeTab === 'inbox' ? 'bg-[#024570]/10 text-[#024570]' : 'text-slate-600 hover:bg-slate-100'}`}>
+                                        <Inbox size={18} /> Inbox {MESSAGES_DATA.inbox.some(m => !m.read) && <span className="ml-auto bg-[#024570] text-white text-xs font-bold px-2 py-0.5 rounded-full">2</span>}
+                                    </button>
+                                    <button onClick={() => setActiveTab('sent')} className={`w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 font-medium transition-colors ${activeTab === 'sent' ? 'bg-[#024570]/10 text-[#024570]' : 'text-slate-600 hover:bg-slate-100'}`}>
+                                        <Send size={18} /> Sent
+                                    </button>
+                                    <button onClick={() => setActiveTab('drafts')} className={`w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 font-medium transition-colors ${activeTab === 'drafts' ? 'bg-[#024570]/10 text-[#024570]' : 'text-slate-600 hover:bg-slate-100'}`}>
+                                        <FileEdit size={18} /> Drafts {drafts.length > 0 && <span className="ml-auto bg-slate-300 text-slate-600 text-xs font-bold px-2 py-0.5 rounded-full">{drafts.length}</span>}
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="flex-1 flex flex-col">
+                                <div className="p-4 border-b border-slate-200 flex items-center gap-4 sticky top-0 bg-white z-10">
+                                    <div className="relative flex-1">
+                                        <Search className="absolute left-3 top-2.5 text-slate-400" size={18} />
+                                        <input type="text" placeholder="Search messages..." className="w-full pl-10 pr-4 py-2 bg-slate-100 border-transparent focus:bg-white focus:border-slate-300 rounded-lg text-sm transition-all outline-none" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                                    </div>
+                                    <div className="flex items-center gap-2 text-slate-400">
+                                        <button className="p-2 hover:bg-slate-100 rounded-full" title="Filter"><Filter size={18} /></button>
+                                        <button className="p-2 hover:bg-slate-100 rounded-full" title="Options"><MoreVertical size={18} /></button>
+                                    </div>
+                                </div>
+                                <div className="flex-1 overflow-y-auto">
+                                    {filteredMessages.length > 0 ? (
+                                        <div>
+                                            {filteredMessages.map((msg) => (
+                                                <div key={msg.id} className={`group flex items-start gap-4 p-4 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors ${!msg.read && activeTab === 'inbox' ? 'bg-blue-50/30' : ''}`}>
+                                                    <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-white font-bold ${activeTab === 'drafts' ? 'bg-slate-400' : 'bg-slate-200'}`}>
+                                                        {msg.avatar ? <img src={msg.avatar} className="w-10 h-10 rounded-full" /> : <FileEdit size={20} />}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex justify-between items-baseline mb-1">
+                                                            <h3 className={`text-sm truncate pr-2 ${!msg.read && activeTab === 'inbox' ? 'font-bold text-slate-900' : 'font-medium text-slate-700'}`}>
+                                                                {activeTab === 'inbox' ? msg.sender : (activeTab === 'drafts' ? `Draft to: ${msg.recipient}` : `To: ${msg.recipient}`)}
+                                                            </h3>
+                                                            <span className={`text-xs flex-shrink-0 ${!msg.read && activeTab === 'inbox' ? 'font-bold text-[#024570]' : 'text-slate-400'}`}>
+                                                                {msg.date}
+                                                            </span>
+                                                        </div>
+                                                        <h4 className={`text-sm mb-1 truncate ${!msg.read && activeTab === 'inbox' ? 'font-bold text-slate-800' : 'text-slate-600'}`}>
+                                                            {msg.subject || '(No Subject)'}
+                                                        </h4>
+                                                        <p className="text-sm text-slate-500 truncate">
+                                                            {msg.preview || msg.body}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="h-full flex flex-col items-center justify-center text-slate-400 p-8">
+                                            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                                                <MessageSquare size={32} className="opacity-50" />
+                                            </div>
+                                            <p className="font-medium">No messages found</p>
+                                            <p className="text-sm mt-1">Try adjusting your search query.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const Payments = () => {
+            const [view, setView] = useState('history');
+            const [invoices, setInvoices] = useState([
+                { id: 1, date: '2025-10-24', number: 'INV-001', recipient: 'TechFlow Inc.', paymentOption: 'PayPal', status: 'Paid', amount: '350.00 USD' },
+                { id: 2, date: '2025-11-01', number: 'INV-002', recipient: 'Growth Property Solutions', paymentOption: 'Payoneer', status: 'Pending', amount: '200.00 USD' }
+            ]);
+            const [invoiceForm, setInvoiceForm] = useState({
+                name: 'Jon Craig Cabug Bilag',
+                email: 'craigbilag@gmail.com',
+                paymentOption: 'PayPal',
+                currency: 'USD',
+                invoiceNo: '',
+                dateCreated: '',
+                dueDate: '',
+                billTo: '',
+                employerEmail: '',
+                companyName: '',
+                notes: ''
+            });
+            const [lineItems, setLineItems] = useState([
+                { id: 1, description: '', hours: 0, rate: 0, amount: 0 }
+            ]);
+            const handleLineItemChange = (id, field, value) => {
+                setLineItems(prev => prev.map(item => {
+                    if (item.id === id) {
+                        const updatedItem = { ...item, [field]: value };
+                        if (field === 'hours' || field === 'rate') {
+                            updatedItem.amount = (parseFloat(updatedItem.hours) || 0) * (parseFloat(updatedItem.rate) || 0);
+                        }
+                        return updatedItem;
+                    }
+                    return item;
+                }));
+            };
+            const addLineItem = () => {
+                setLineItems([...lineItems, { id: Date.now(), description: '', hours: 0, rate: 0, amount: 0 }]);
+            };
+            const removeLineItem = (id) => {
+                setLineItems(lineItems.filter(item => item.id !== id));
+            };
+            const totalAmount = lineItems.reduce((sum, item) => sum + item.amount, 0);
+
+            return (
+                <div className="bg-slate-50 min-h-screen pb-20">
+                    <div className="bg-[#024570] pt-12 pb-20">
+                        <div className="max-w-5xl mx-auto px-4">
+                            <h1 className="text-2xl font-bold text-white mb-2">Payments & Invoices</h1>
+                            <p className="text-white/80">Manage all your invoices and bill your employers easily.</p>
+                        </div>
+                    </div>
+                    <div className="max-w-5xl mx-auto px-4 -mt-10">
+                        <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden min-h-[500px]">
+                            <div className="flex border-b border-slate-200">
+                                <button onClick={() => setView('history')} className={`flex-1 py-4 text-sm font-bold text-center border-b-2 transition-colors ${view === 'history' ? 'border-[#024570] text-[#024570]' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+                                    <FileText className="inline-block mr-2 mb-0.5" size={16} /> Invoice History
+                                </button>
+                                <button onClick={() => setView('create')} className={`flex-1 py-4 text-sm font-bold text-center border-b-2 transition-colors ${view === 'create' ? 'border-[#73B743] text-[#73B743]' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+                                    <Plus className="inline-block mr-2 mb-0.5" size={16} /> Create Invoice
+                                </button>
+                            </div>
+                            <div className="p-6">
+                                {view === 'history' ? (
+                                    <>
+                                        <div className="bg-[#fff9e6] border border-amber-200 rounded-xl p-6 mb-8 flex flex-col md:flex-row items-center justify-between gap-6">
+                                            <div className="text-center md:text-left">
+                                                <h3 className="font-bold text-slate-900 text-lg mb-1">Get Paid with EasyPay!</h3>
+                                                <p className="text-sm text-slate-600">Seamlessly create invoices and get paid via Payoneer or PayPal.</p>
+                                            </div>
+                                            <div className="flex gap-3">
+                                                <button className="bg-[#73B743] text-white px-5 py-2.5 rounded-full text-sm font-bold shadow-sm hover:bg-[#65a33a] transition-colors">Register with Payoneer</button>
+                                                <button className="bg-white border border-slate-300 text-slate-700 px-5 py-2.5 rounded-full text-sm font-bold shadow-sm hover:bg-slate-50 transition-colors">Connect PayPal</button>
+                                            </div>
+                                        </div>
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-sm text-left">
+                                                <thead className="bg-slate-50 text-slate-500 uppercase font-bold text-xs">
+                                                    <tr>
+                                                        <th className="px-4 py-3 rounded-l-lg">Date</th>
+                                                        <th className="px-4 py-3">Invoice #</th>
+                                                        <th className="px-4 py-3">Recipient</th>
+                                                        <th className="px-4 py-3">Payment</th>
+                                                        <th className="px-4 py-3">Status</th>
+                                                        <th className="px-4 py-3 text-right rounded-r-lg">Amount</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-100">
+                                                    {invoices.map(inv => (
+                                                        <tr key={inv.id} className="hover:bg-slate-50 transition-colors">
+                                                            <td className="px-4 py-3 font-medium text-slate-700">{inv.date}</td>
+                                                            <td className="px-4 py-3 text-slate-500">{inv.number}</td>
+                                                            <td className="px-4 py-3 font-bold text-[#024570]">{inv.recipient}</td>
+                                                            <td className="px-4 py-3 text-slate-500">{inv.paymentOption}</td>
+                                                            <td className="px-4 py-3">
+                                                                <span className={`px-2 py-1 rounded text-xs font-bold ${inv.status === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{inv.status}</span>
+                                                            </td>
+                                                            <td className="px-4 py-3 text-right font-bold text-slate-900">{inv.amount}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                            {invoices.length === 0 && (
+                                                <div className="text-center py-12 text-slate-400">
+                                                    <Receipt size={48} className="mx-auto mb-3 opacity-20" />
+                                                    <p>No invoices created yet.</p>
+                                                    <button onClick={() => setView('create')} className="mt-4 text-[#024570] font-bold hover:underline">Create your first invoice</button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="max-w-4xl mx-auto">
+                                        <div className="space-y-8">
+                                            <div>
+                                                <h3 className="text-lg font-bold text-slate-900 mb-4 pb-2 border-b border-slate-100">Personal Information</h3>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Full Name</label>
+                                                        <input type="text" className="w-full p-2.5 border border-slate-300 rounded-lg text-sm bg-slate-50 text-slate-500" value={invoiceForm.name} readOnly />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Email</label>
+                                                        <input type="text" className="w-full p-2.5 border border-slate-300 rounded-lg text-sm bg-slate-50 text-slate-500" value={invoiceForm.email} readOnly />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                <div>
+                                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Payment Option</label>
+                                                    <select className="w-full p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-[#024570]">
+                                                        <option>PayPal</option>
+                                                        <option>Payoneer</option>
+                                                        <option>Other</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Currency</label>
+                                                    <select className="w-full p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-[#024570]">
+                                                        <option>USD</option>
+                                                        <option>AUD</option>
+                                                        <option>PHP</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <h3 className="text-lg font-bold text-slate-900 mb-4 pb-2 border-b border-slate-100">Billing Information</h3>
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Invoice No.</label>
+                                                        <input type="text" className="w-full p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-[#024570]" placeholder="001" />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Invoice Date</label>
+                                                        <input type="date" className="w-full p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-[#024570]" />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Due Date</label>
+                                                        <input type="date" className="w-full p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-[#024570]" />
+                                                    </div>
+                                                </div>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Bill To (Employer)</label>
+                                                        <select className="w-full p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-[#024570]">
+                                                            <option>Select Employer...</option>
+                                                            <option>TechFlow Inc.</option>
+                                                            <option>Growth Property Solutions</option>
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Employer Email</label>
+                                                        <input type="email" className="w-full p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-[#024570]" placeholder="client@example.com" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <h3 className="text-lg font-bold text-slate-900 mb-4 pb-2 border-b border-slate-100">Line Items</h3>
+                                                <div className="bg-slate-50 rounded-lg border border-slate-200 overflow-hidden">
+                                                    <table className="w-full text-sm">
+                                                        <thead className="bg-slate-100 text-slate-500 uppercase text-xs font-bold border-b border-slate-200">
+                                                            <tr>
+                                                                <th className="px-4 py-2 text-left w-10"></th>
+                                                                <th className="px-4 py-2 text-left">Description</th>
+                                                                <th className="px-4 py-2 w-24">Hours</th>
+                                                                <th className="px-4 py-2 w-28">Rate</th>
+                                                                <th className="px-4 py-2 text-right w-32">Amount</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="divide-y divide-slate-100">
+                                                            {lineItems.map((item, idx) => (
+                                                                <tr key={item.id}>
+                                                                    <td className="px-2 py-2 text-center">
+                                                                        <button onClick={() => removeLineItem(item.id)} className="text-slate-400 hover:text-red-500 p-1"><Trash2 size={16} /></button>
+                                                                    </td>
+                                                                    <td className="px-2 py-2">
+                                                                        <input type="text" className="w-full p-2 border border-slate-300 rounded-md focus:border-[#024570] outline-none" placeholder="Item description" value={item.description} onChange={(e) => handleLineItemChange(item.id, 'description', e.target.value)} />
+                                                                    </td>
+                                                                    <td className="px-2 py-2">
+                                                                        <input type="number" className="w-full p-2 border border-slate-300 rounded-md focus:border-[#024570] outline-none text-center" placeholder="0" value={item.hours} onChange={(e) => handleLineItemChange(item.id, 'hours', e.target.value)} />
+                                                                    </td>
+                                                                    <td className="px-2 py-2">
+                                                                        <input type="number" className="w-full p-2 border border-slate-300 rounded-md focus:border-[#024570] outline-none text-center" placeholder="0.00" value={item.rate} onChange={(e) => handleLineItemChange(item.id, 'rate', e.target.value)} />
+                                                                    </td>
+                                                                    <td className="px-4 py-2 text-right font-bold text-slate-700">{item.amount.toFixed(2)}</td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                    <button onClick={addLineItem} className="w-full py-3 text-center text-xs font-bold text-[#024570] hover:bg-slate-100 uppercase tracking-wide transition-colors">+ Add another line item</button>
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col md:flex-row gap-8">
+                                                <div className="flex-1">
+                                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Notes to Recipient</label>
+                                                    <textarea rows={4} className="w-full p-3 border border-slate-300 rounded-lg text-sm focus:border-[#024570] outline-none resize-none" placeholder="Thank you for your business..."></textarea>
+                                                </div>
+                                                <div className="w-full md:w-64 flex flex-col justify-end items-end">
+                                                    <p className="text-slate-500 font-bold uppercase text-xs mb-1">Total Amount</p>
+                                                    <p className="text-3xl font-bold text-[#024570]">{totalAmount.toFixed(2)} <span className="text-lg text-slate-400">USD</span></p>
+                                                </div>
+                                            </div>
+                                            <div className="border-t border-slate-200 pt-6 flex flex-wrap justify-end gap-3">
+                                                <button className="px-6 py-2.5 border border-slate-300 rounded-lg text-slate-600 font-bold hover:bg-slate-50 flex items-center gap-2"><Download size={18} /> PDF</button>
+                                                <button className="px-6 py-2.5 border border-slate-300 rounded-lg text-slate-600 font-bold hover:bg-slate-50 flex items-center gap-2"><Save size={18} /> Save Template</button>
+                                                <button className="px-8 py-2.5 bg-[#73B743] text-white rounded-lg font-bold hover:bg-[#65a33a] shadow-md transition-all flex items-center gap-2"><Send size={18} /> Send Invoice</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const Navbar = ({ activeTab, setActiveTab, mobileMenuOpen, setMobileMenuOpen, bookmarkedCount, setProfileSubTab, profileImage }) => {
+            const [isProfileOpen, setIsProfileOpen] = useState(false);
+
+            const handleNavClick = (tab) => {
+                setActiveTab(tab);
+                setIsProfileOpen(false);
+                setMobileMenuOpen(false);
+            }
+
+            return (
+                <nav className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="flex justify-between h-16">
+                            <div className="flex items-center cursor-pointer" onClick={() => handleNavClick('home')}>
+                                <span className="text-2xl font-bold tracking-tight text-slate-800">
+                                    Online<span className="text-[#024570]">Jobs</span>.ph
+                                </span>
+                            </div>
+                            <div className="hidden md:flex items-center space-x-6">
+                                <button 
+                                    onClick={() => handleNavClick('jobs')}
+                                    className={`px-5 py-2 rounded-full text-sm font-bold transition-all shadow-sm hover:shadow-md ${activeTab === 'jobs' ? 'bg-[#023e65] ring-2 ring-offset-2 ring-[#024570]' : 'bg-[#024570] hover:bg-[#023e65]'} text-white`}
+                                >
+                                    Find Jobs
+                                </button>
+                                <button 
+                                    onClick={() => handleNavClick('how-it-works')}
+                                    className={`text-sm font-medium transition-colors ${activeTab === 'how-it-works' ? 'text-[#024570]' : 'text-slate-600 hover:text-slate-900'}`}
+                                >
+                                    How it Works
+                                </button>
+                                <div className="h-6 w-px bg-slate-200 mx-2"></div>
+                                <div className="flex items-center gap-4">
+                                    <button 
+                                        onClick={() => handleNavClick('messages')}
+                                        className={`relative hover:text-[#024570] transition-colors group ${activeTab === 'messages' ? 'text-[#024570]' : 'text-slate-500'}`} 
+                                        title="Messages"
+                                    >
+                                        <MessageSquare size={22} strokeWidth={1.5} />
+                                        <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">2</span>
+                                    </button>
+                                    <button 
+                                        onClick={() => handleNavClick('saved-jobs')}
+                                        className={`relative hover:text-red-500 transition-colors ${activeTab === 'saved-jobs' ? 'text-red-500' : 'text-slate-500'}`} 
+                                        title="Saved Jobs"
+                                    >
+                                        <Heart size={22} strokeWidth={1.5} />
+                                        {bookmarkedCount > 0 && (
+                                            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white font-bold">{bookmarkedCount}</span>
+                                        )}
+                                    </button>
+                                    <div className="relative">
+                                        <div 
+                                            className="flex items-center gap-2 ml-2 pl-2 border-l border-slate-100 cursor-pointer select-none"
+                                            onClick={() => setIsProfileOpen(!isProfileOpen)}
+                                        >
+                                            {profileImage ? (
+                                                <img 
+                                                    src={profileImage} 
+                                                    alt="User" 
+                                                    className="w-9 h-9 rounded-full border border-slate-200 bg-slate-50 shadow-sm object-cover"
+                                                />
+                                            ) : (
+                                                <div className="w-9 h-9 rounded-full border border-slate-200 bg-slate-200 shadow-sm flex items-center justify-center overflow-hidden">
+                                                    <User size={24} className="text-slate-400 mt-1" fill="currentColor" />
+                                                </div>
+                                            )}
+                                            <ChevronDown size={16} className={`text-slate-400 transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} />
+                                        </div>
+                                        {isProfileOpen && (
+                                            <>
+                                                <div className="fixed inset-0 z-40 cursor-default" onClick={() => setIsProfileOpen(false)} />
+                                                <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-100 py-1 z-50 animate-in fade-in zoom-in-95 duration-100 origin-top-right">
+                                                    <div className="px-4 py-3 border-b border-slate-100">
+                                                        <p className="text-sm font-bold text-slate-900">Jon Craig B.</p>
+                                                    </div>
+                                                    <button className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2" onClick={() => { handleNavClick('profile'); setProfileSubTab('overview'); }}>
+                                                        <User size={16} /> Profile
+                                                    </button>
+                                                    <button className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2" onClick={() => handleNavClick('saved-jobs')}>
+                                                        <FileStack size={16} /> My Jobs
+                                                    </button>
+                                                    <button className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2" onClick={() => handleNavClick('payments')}>
+                                                        <CreditCard size={16} /> Payments
+                                                    </button>
+                                                    <div className="h-px bg-slate-100 my-1"></div>
+                                                    <button className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2" onClick={() => setIsProfileOpen(false)}>
+                                                        <LogOut size={16} /> Log Out
+                                                    </button>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex items-center md:hidden">
+                                <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="text-slate-600 hover:text-slate-900">
+                                    {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {mobileMenuOpen && (
+                        <div className="md:hidden bg-white border-b border-slate-200 pb-4">
+                            <div className="px-4 pt-2 pb-3 space-y-1">
+                                <button onClick={() => handleNavClick('jobs')} className="block w-full text-left px-3 py-2 text-base font-bold text-white bg-[#024570] rounded-md mb-2">Find Jobs</button>
+                                <button onClick={() => handleNavClick('how-it-works')} className="block w-full text-left px-3 py-2 text-base font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-md">How it Works</button>
+                                <div className="border-t border-slate-100 my-2 pt-2">
+                                    <button onClick={() => handleNavClick('messages')} className="block w-full text-left px-3 py-2 text-base font-medium text-slate-600 hover:bg-slate-50 flex items-center gap-2"><MessageSquare size={16}/> Messages <span className="bg-red-500 text-white text-xs rounded-full px-1.5 ml-auto">2</span></button>
+                                    <button onClick={() => handleNavClick('saved-jobs')} className="block w-full text-left px-3 py-2 text-base font-medium text-slate-600 hover:bg-slate-50 flex items-center gap-2"><Heart size={16}/> Saved Jobs {bookmarkedCount > 0 && `(${bookmarkedCount})`}</button>
+                                    <button onClick={() => { handleNavClick('profile'); setProfileSubTab('overview'); }} className="block w-full text-left px-3 py-2 text-base font-medium text-slate-600 hover:bg-slate-50 flex items-center gap-2"><User size={16}/> Profile</button>
+                                    <button className="block w-full text-left px-3 py-2 text-base font-medium text-slate-600 hover:bg-slate-50 flex items-center gap-2"><FileStack size={16}/> My Jobs</button>
+                                    <button onClick={() => handleNavClick('payments')} className="block w-full text-left px-3 py-2 text-base font-medium text-slate-600 hover:bg-slate-50 flex items-center gap-2"><CreditCard size={16}/> Payments</button>
+                                    <button className="block w-full text-left px-3 py-2 text-base font-medium text-red-600 hover:bg-red-50 flex items-center gap-2"><LogOut size={16}/> Log Out</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </nav>
+            );
+        };
+
+        const JobDetail = ({ job, onClose, bookmarkedJobs, toggleBookmark, onApplyClick, onJobClick }) => {
+            const isBookmarked = bookmarkedJobs?.includes(job.id);
+
+            return (
+                <div className="fixed inset-0 z-[60] bg-white overflow-y-auto animate-in slide-in-from-right duration-300">
+                    <div className="min-h-screen pb-24 relative">
+                        <div className="sticky top-0 bg-white border-b border-slate-200 z-10 px-4 py-4 flex items-center justify-between shadow-sm">
+                            <button onClick={onClose} className="flex items-center text-slate-500 hover:text-slate-800 font-medium transition-colors">
+                                <CornerUpLeft size={20} className="mr-2" /> Back to Jobs
+                            </button>
+                            <button 
+                                onClick={() => toggleBookmark(job.id)}
+                                className={`p-2 rounded-full transition-colors ${isBookmarked ? 'bg-red-50 text-red-500' : 'bg-slate-50 text-slate-400 hover:text-red-400'}`}
+                            >
+                                <Heart size={20} className={isBookmarked ? "fill-current" : ""} />
+                            </button>
+                        </div>
+                        <div className="max-w-6xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+                            <div className="lg:col-span-2 space-y-8">
+                                <div>
+                                    <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-2">{job.title}</h1>
+                                    <div className="flex flex-wrap items-center gap-4 text-slate-500 mb-6">
+                                        <span className="font-medium text-[#024570]">{job.company}</span>
+                                        <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
+                                        <span className="flex items-center"><MapPin size={16} className="mr-1" /> Remote (PH)</span>
+                                        <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
+                                        <span className="flex items-center"><Clock size={16} className="mr-1" /> Posted {job.posted}</span>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2 mb-8">
+                                        <span className="bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-sm font-medium">{job.type}</span>
+                                        <span className="bg-green-50 text-green-700 px-3 py-1 rounded-full text-sm font-medium">{job.salary}</span>
+                                    </div>
+                                    <div className="prose prose-slate max-w-none text-slate-700">
+                                        <h3 className="text-lg font-bold text-slate-900 mb-3">Job Description</h3>
+                                        <div className="whitespace-pre-line leading-relaxed">
+                                            {job.description || "No description provided."}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="border-t border-slate-200 pt-8">
+                                    <h3 className="text-lg font-bold text-slate-900 mb-4">Required Skills</h3>
+                                    <div className="flex flex-wrap gap-2">
+                                        {job.skills.map(skill => (
+                                            <span key={skill} className="bg-white border border-slate-200 px-4 py-2 rounded-lg text-sm font-medium text-slate-600 shadow-sm">
+                                                {skill}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="hidden lg:block space-y-6">
+                                <h3 className="font-bold text-slate-900">Related Jobs</h3>
+                                <div className="space-y-4">
+                                    {JOBS.filter(j => j.id !== job.id).slice(0, 3).map(related => (
+                                        <div 
+                                            key={related.id} 
+                                            className="bg-white p-4 rounded-xl border border-slate-200 hover:shadow-md transition-shadow cursor-pointer"
+                                            onClick={() => onJobClick && onJobClick(related)}
+                                        >
+                                            <h4 className="font-bold text-slate-900 text-sm mb-1">{related.title}</h4>
+                                            <p className="text-xs text-slate-500 mb-2">{related.company}</p>
+                                            <p className="text-xs font-bold text-green-600">{related.salary}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+                            <div className="max-w-6xl mx-auto flex items-center justify-between">
+                                <div className="hidden md:block">
+                                    <p className="font-bold text-slate-900 text-lg">Apply for this position</p>
+                                    <p className="text-sm text-slate-500">12 other people have applied</p>
+                                </div>
+                                <button 
+                                    onClick={() => onApplyClick(job)}
+                                    className="w-full md:w-auto bg-[#73B743] hover:bg-[#65a33a] text-white font-bold py-3 px-8 rounded-lg shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5"
+                                >
+                                    Apply Now
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const ApplyModal = ({ job, isOpen, onClose, onSaveDraft }) => {
+            const [subject, setSubject] = useState('');
+            const [message, setMessage] = useState('');
+            const [points, setPoints] = useState(1);
+            const [showDiscardAlert, setShowDiscardAlert] = useState(false);
+
+            useEffect(() => {
+                if (isOpen && job) {
+                    setSubject(`Application for ${job.title}`);
+                    setMessage('');
+                    setPoints(1);
+                    setShowDiscardAlert(false);
+                }
+            }, [isOpen, job]);
+
+            if (!isOpen || !job) return null;
+
+            const handleCloseAttempt = () => {
+                if (message.trim().length > 0) {
+                    setShowDiscardAlert(true);
+                } else {
+                    onClose();
+                }
+            };
+
+            const handleDiscard = () => {
+                setShowDiscardAlert(false);
+                onClose();
+            };
+
+            const handleSaveDraft = () => {
+                onSaveDraft({
+                    recipient: job.company,
+                    subject: subject,
+                    body: message,
+                    date: 'Draft',
+                    id: Date.now()
+                });
+                onClose();
+            };
+
+            return (
+                <div className="fixed inset-0 z-[70] overflow-y-auto" role="dialog" aria-modal="true">
+                    <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+                        <div className="fixed inset-0 bg-slate-900 bg-opacity-75 transition-opacity" onClick={handleCloseAttempt}></div>
+                        <div className="inline-block bg-white rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:max-w-2xl w-full relative">
+                            {showDiscardAlert && (
+                                <div className="absolute inset-0 z-10 bg-white/95 flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-200">
+                                    <AlertCircle size={48} className="text-amber-500 mb-4" />
+                                    <h3 className="text-xl font-bold text-slate-900 mb-2">Unsaved Changes</h3>
+                                    <p className="text-slate-600 mb-8 max-w-sm">You have started writing an application. Do you want to save this as a draft to finish later?</p>
+                                    <div className="flex gap-3 w-full max-w-xs">
+                                        <button 
+                                            onClick={handleDiscard}
+                                            className="flex-1 px-4 py-2 border border-slate-300 rounded-lg text-slate-600 font-bold hover:bg-slate-50 transition-colors"
+                                        >
+                                            Discard
+                                        </button>
+                                        <button 
+                                            onClick={handleSaveDraft}
+                                            className="flex-1 px-4 py-2 bg-[#024570] text-white rounded-lg font-bold hover:bg-[#023e65] transition-colors"
+                                        >
+                                            Save Draft
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                            <div className="bg-white px-4 pt-5 pb-4 sm:p-6">
+                                <div className="flex justify-between items-start mb-6">
+                                    <div>
+                                        <h3 className="text-2xl font-bold text-slate-900">Apply to {job.company}</h3>
+                                        <p className="text-slate-500 text-sm mt-1">{job.title}</p>
+                                    </div>
+                                    <button onClick={handleCloseAttempt} className="text-slate-400 hover:text-slate-500">
+                                        <X size={24} />
+                                    </button>
+                                </div>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-bold text-slate-700 mb-2">Subject</label>
+                                        <input 
+                                            type="text" 
+                                            value={subject}
+                                            onChange={(e) => setSubject(e.target.value)}
+                                            className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#024570] outline-none transition-shadow font-medium"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-bold text-slate-700 mb-2">Message</label>
+                                        <textarea 
+                                            rows={8}
+                                            value={message}
+                                            onChange={(e) => setMessage(e.target.value)}
+                                            placeholder="Introduce yourself and explain why you're a good fit..."
+                                            className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#024570] outline-none transition-shadow resize-none"
+                                        />
+                                    </div>
+                                    <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 flex items-center justify-between">
+                                        <div>
+                                            <span className="block font-bold text-slate-700 text-sm">Apply Points</span>
+                                            <span className="text-xs text-slate-500">Highlight your application (Max 5)</span>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <button 
+                                                onClick={() => setPoints(Math.max(1, points - 1))}
+                                                className="p-1 rounded-md hover:bg-slate-200 text-slate-500 disabled:opacity-50"
+                                                disabled={points <= 1}
+                                            >
+                                                <Minus size={16} />
+                                            </button>
+                                            <span className="font-bold text-lg w-4 text-center">{points}</span>
+                                            <button 
+                                                onClick={() => setPoints(Math.min(5, points + 1))}
+                                                className="p-1 rounded-md hover:bg-slate-200 text-slate-500 disabled:opacity-50"
+                                                disabled={points >= 5}
+                                            >
+                                                <Plus size={16} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-slate-50 px-4 py-4 sm:px-6 flex justify-end gap-3">
+                                <button 
+                                    type="button" 
+                                    className="px-6 py-2.5 border border-slate-300 rounded-lg text-slate-600 font-bold hover:bg-white transition-colors"
+                                    onClick={handleCloseAttempt}
+                                >
+                                    Cancel
+                                </button>
+                                <button 
+                                    type="button" 
+                                    className="px-8 py-2.5 bg-[#73B743] text-white rounded-lg font-bold hover:bg-[#65a33a] shadow-md transition-all transform hover:-translate-y-0.5"
+                                    onClick={() => { alert("Application Sent!"); onClose(); }}
+                                >
+                                    Send Application
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const Footer = () => (
+            <footer className="bg-slate-900 text-slate-400 py-12">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
+                        <div>
+                            <h4 className="text-white font-bold mb-4">For Employers</h4>
+                            <ul className="space-y-2 text-sm">
+                                <li><a href="#" className="hover:text-white">Post a Job</a></li>
+                                <li><a href="#" className="hover:text-white">Pricing</a></li>
+                                <li><a href="#" className="hover:text-white">Employer Reviews</a></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 className="text-white font-bold mb-4">For Workers</h4>
+                            <ul className="space-y-2 text-sm">
+                                <li><a href="#" className="hover:text-white">Browse Jobs</a></li>
+                                <li><a href="#" className="hover:text-white">Create Profile</a></li>
+                                <li><a href="#" className="hover:text-white">Learning Center</a></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 className="text-white font-bold mb-4">Resources</h4>
+                            <ul className="space-y-2 text-sm">
+                                <li><a href="#" className="hover:text-white">Outsourcing Guide</a></li>
+                                <li><a href="#" className="hover:text-white">Success Stories</a></li>
+                                <li><a href="#" className="hover:text-white">Blog</a></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <div className="mb-4">
+                                <span className="text-xl font-bold text-white">Online<span className="text-[#024570]">Jobs</span>.ph</span>
+                            </div>
+                            <p className="text-sm text-slate-500">
+                                The world's largest marketplace for finding Filipino virtual assistants and specialists.
+                            </p>
+                        </div>
+                    </div>
+                    <div className="border-t border-slate-800 pt-8 text-center text-sm">
+                        &copy; 2024 OnlineJobs.ph. All rights reserved.
+                    </div>
+                </div>
+            </footer>
+        );
+
+        const App = () => {
+            const [activeTab, setActiveTab] = useState('home');
+            const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+            const [profileSubTab, setProfileSubTab] = useState('overview');
+            const [profileImage, setProfileImage] = useState(null);
+            
+            const [activeJob, setActiveJob] = useState(null); 
+            const [bookmarkedJobs, setBookmarkedJobs] = useState([1342422, 1519843]); 
+            const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
+            const [drafts, setDrafts] = useState(INITIAL_DRAFTS);
+
+            const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+            const [filters, setFilters] = useState({
+                jobTypes: [],
+                salary: { min: 0, max: 0 }
+            });
+
+            const toggleBookmark = (jobId) => {
+                setBookmarkedJobs(prev => 
+                    prev.includes(jobId) ? prev.filter(id => id !== jobId) : [...prev, jobId]
+                );
+            };
+
+            const handleJobClick = (job) => {
+                setActiveJob(job);
+            };
+
+            const handleApplyClick = (job) => {
+                if (!activeJob || activeJob.id !== job.id) {
+                    setActiveJob(job);
+                }
+                setIsApplyModalOpen(true);
+            };
+
+            const saveDraft = (draft) => {
+                setDrafts(prev => [draft, ...prev]);
+            };
+
+            return (
+                <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
+                    <Navbar 
+                        activeTab={activeTab} 
+                        setActiveTab={setActiveTab} 
+                        mobileMenuOpen={mobileMenuOpen}
+                        setMobileMenuOpen={setMobileMenuOpen}
+                        bookmarkedCount={bookmarkedJobs.length}
+                        setProfileSubTab={setProfileSubTab}
+                        profileImage={profileImage}
+                    />
+                    
+                    {/* Dynamic Content Switching */}
+                    {activeTab === 'home' && (
+                        <Dashboard 
+                            setActiveTab={setActiveTab} 
+                            setProfileSubTab={setProfileSubTab} 
+                            profileImage={profileImage}
+                        />
+                    )}
+
+                    {activeTab === 'jobs' && (
+                        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                            <div className="flex-1">
+                                <div className="flex flex-col md:flex-row items-center justify-between mb-8">
+                                    <div>
+                                        <h1 className="text-3xl font-bold text-slate-900">Find Jobs</h1>
+                                        <p className="text-slate-500 mt-1">Showing 1,240 open positions</p>
+                                    </div>
+                                    <div className="mt-4 md:mt-0 hidden md:block">
+                                        <span className="text-sm text-slate-500 bg-white px-3 py-1 rounded-full border border-slate-200">
+                                            Sort by: <strong>Newest</strong>
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <div className="relative mb-8 flex gap-3">
+                                    <div className="relative flex-1">
+                                        <input 
+                                            type="text" 
+                                            placeholder="Search for job titles (e.g. SEO Specialist)" 
+                                            className="w-full p-4 pl-12 border border-slate-200 rounded-xl shadow-sm focus:ring-2 focus:ring-[#024570] focus:border-transparent outline-none transition-shadow" 
+                                        />
+                                        <Search className="absolute left-4 top-4 text-slate-400" />
+                                    </div>
+                                    
+                                    <button 
+                                        onClick={() => setIsFilterModalOpen(true)}
+                                        className="flex items-center px-6 bg-white border border-slate-200 rounded-xl shadow-sm text-slate-700 font-bold hover:bg-slate-50 hover:border-slate-300 transition-all"
+                                    >
+                                        <SlidersHorizontal size={18} className="mr-2" />
+                                        Filters
+                                    </button>
+                                </div>
+
+                                {(filters.jobTypes.length > 0 || filters.salary.max > 0) && (
+                                    <div className="flex flex-wrap gap-2 mb-6">
+                                        {filters.jobTypes.map(type => (
+                                            <span key={type} className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-[#024570]/10 text-[#024570]">
+                                                {type} <X size={12} className="ml-1 cursor-pointer hover:text-red-500" />
+                                            </span>
+                                        ))}
+                                        {(filters.salary.min > 0 || filters.salary.max > 0) && (
+                                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-[#024570]/10 text-[#024570]">
+                                                ${filters.salary.min} - ${filters.salary.max > 0 ? filters.salary.max : 'Any'}
+                                                <X size={12} className="ml-1 cursor-pointer hover:text-red-500" />
+                                            </span>
+                                        )}
+                                        <button 
+                                            onClick={() => setFilters({ jobTypes: [], salary: { min: 0, max: 0 } })}
+                                            className="text-xs text-slate-400 hover:text-slate-600 underline ml-2"
+                                        >
+                                            Clear all
+                                        </button>
+                                    </div>
+                                )}
+
+                                <JobListing 
+                                    featuredOnly={false} 
+                                    onJobClick={handleJobClick}
+                                    bookmarkedJobs={bookmarkedJobs}
+                                    toggleBookmark={toggleBookmark}
+                                />
+                                
+                                <div className="mt-12 flex justify-center">
+                                    <button className="px-8 py-3 bg-white border border-slate-200 rounded-lg text-slate-600 font-bold hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm">
+                                        Load More Jobs
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'saved-jobs' && (
+                        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                            <h1 className="text-3xl font-bold text-slate-900 mb-8">Saved Jobs</h1>
+                            {bookmarkedJobs.length > 0 ? (
+                                <JobListing 
+                                    jobs={JOBS.filter(job => bookmarkedJobs.includes(job.id))}
+                                    onJobClick={handleJobClick}
+                                    bookmarkedJobs={bookmarkedJobs}
+                                    toggleBookmark={toggleBookmark}
+                                />
+                            ) : (
+                                <div className="text-center py-20 text-slate-500">
+                                    <Heart size={48} className="mx-auto mb-4 opacity-20" />
+                                    <p className="text-lg">You haven't saved any jobs yet.</p>
+                                    <button onClick={() => setActiveTab('jobs')} className="mt-4 text-[#024570] font-bold hover:underline">Browse Jobs</button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {activeTab === 'workers' && (
+                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                            <div className="text-center max-w-2xl mx-auto mb-12">
+                                <h1 className="text-3xl font-bold text-slate-900 mb-4">Find Your Next Rock Star</h1>
+                                <p className="text-slate-600">Search through 2 million+ resumes. Filter by skill, ID proof score, and salary requirement.</p>
+                            </div>
+
+                            <div className="bg-white p-4 rounded-xl shadow-lg shadow-[#024570]/5 mb-12 border border-slate-100 flex flex-col md:flex-row gap-4">
+                                <div className="flex-1 relative">
+                                    <Search className="absolute left-4 top-3.5 text-slate-400" />
+                                    <input type="text" placeholder="Skill or Job Title (e.g. Virtual Assistant)" className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#024570] outline-none" />
+                                </div>
+                                <div className="w-full md:w-48">
+                                    <select className="w-full h-full border border-slate-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#024570] outline-none text-slate-600 bg-white">
+                                        <option>Max Salary</option>
+                                        <option>$500/mo</option>
+                                        <option>$1000/mo</option>
+                                        <option>$2000/mo</option>
+                                    </select>
+                                </div>
+                                <button className="bg-[#024570] text-white px-8 py-3 rounded-lg font-semibold hover:brightness-110 transition-colors">
+                                    Search
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {WORKERS.map(worker => (
+                                    <WorkerCard key={worker.id} worker={worker} />
+                                ))}
+                                {/* Duplicating for demo grid fill */}
+                                {WORKERS.map(worker => (
+                                    <WorkerCard key={`${worker.id}-copy`} worker={{...worker, id: `${worker.id}-copy`}} />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'messages' && (
+                        <Messages drafts={drafts} />
+                    )}
+
+                    {activeTab === 'how-it-works' && (
+                        <HowItWorks setActiveTab={setActiveTab} />
+                    )}
+
+                    {/* Profile Tab */}
+                    {activeTab === 'profile' && (
+                        <Profile 
+                            subTab={profileSubTab} 
+                            setSubTab={setProfileSubTab} 
+                            profileImage={profileImage}
+                            setProfileImage={setProfileImage}
+                        />
+                    )}
+
+                    {/* Payments Tab */}
+                    {activeTab === 'payments' && (
+                        <Payments />
+                    )}
+                    
+                    {/* Modals & Overlays */}
+                    
+                    <FilterModal 
+                        isOpen={isFilterModalOpen} 
+                        onClose={() => setIsFilterModalOpen(false)} 
+                        filters={filters}
+                        setFilters={setFilters}
+                    />
+
+                    {/* Job Detail View - Conditional Rendering */}
+                    {activeJob && !isApplyModalOpen && (
+                        <JobDetail 
+                            job={activeJob} 
+                            onClose={() => setActiveJob(null)} 
+                            bookmarkedJobs={bookmarkedJobs}
+                            toggleBookmark={toggleBookmark}
+                            onApplyClick={handleApplyClick}
+                            onJobClick={handleJobClick}
+                        />
+                    )}
+
+                    {/* Apply Modal */}
+                    <ApplyModal 
+                        job={activeJob}
+                        isOpen={isApplyModalOpen}
+                        onClose={() => setIsApplyModalOpen(false)}
+                        onSaveDraft={saveDraft}
+                    />
+
+                    <Footer />
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
