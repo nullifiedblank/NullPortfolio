@@ -41,6 +41,15 @@
                         '10xl': '10rem',
                         '12xl': '12rem',
                         'massive': '16rem',
+                    },
+                    animation: {
+                        'marquee': 'marquee 15s linear infinite',
+                    },
+                    keyframes: {
+                        marquee: {
+                            '0%': { transform: 'translateX(0)' },
+                            '100%': { transform: 'translateX(-50%)' },
+                        }
                     }
                 }
             }
@@ -118,6 +127,42 @@
             white-space: nowrap;
             transform-origin: top left;
         }
+
+        /* Lightbox/Modal Styles */
+        #image-modal {
+            transition: opacity 0.3s ease;
+        }
+        #image-modal:not(.hidden) {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        #image-modal.opacity-0 {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Custom Highlight Animation for Connect Section */
+        @keyframes outline-pulse {
+            0%, 100% { outline-color: transparent; }
+            50% { outline-color: white; }
+        }
+        
+        .highlight-connect {
+            outline: 4px solid white;
+            outline-offset: 4px;
+            animation: outline-pulse 0.6s ease-in-out 4; /* Blinks 4 times */
+            border-radius: 4px;
+        }
+        
+        /* Adjust for Light Mode visibility if needed */
+        html:not(.dark) .highlight-connect {
+            outline-color: black !important;
+            animation-name: outline-pulse-dark;
+        }
+        @keyframes outline-pulse-dark {
+            0%, 100% { outline-color: transparent; }
+            50% { outline-color: black; }
+        }
     </style>
 </head>
 <body class="bg-white dark:bg-black text-black dark:text-white font-sans h-screen flex overflow-hidden selection:bg-black selection:text-white dark:selection:bg-white dark:selection:text-black transition-colors duration-300">
@@ -132,13 +177,121 @@
                 <h1 id="intro-blank" class="splash-el text-white font-extrabold tracking-tighter text-5xl sm:text-9xl md:text-11xl lg:text-massive leading-none">
                     Blank
                 </h1>
-                <div id="intro-logo" class="splash-el w-12 h-12 sm:w-24 sm:h-24 md:w-32 md:h-32 lg:w-48 lg:h-48 bg-white text-black flex items-center justify-center font-bold font-mono rounded-lg text-xl sm:text-5xl md:text-7xl lg:text-8xl shadow-2xl border-4 border-white">
+                <!-- Image Logo -->
+                <img id="intro-logo" 
+                     src="assets/logo.png" 
+                     alt="N/"
+                     onerror="this.style.display='none'; document.getElementById('intro-logo-fallback').style.display='flex';"
+                     class="splash-el w-12 h-12 sm:w-24 sm:h-24 md:w-32 md:h-32 lg:w-48 lg:h-48 object-contain">
+                
+                <!-- Fallback if image fails -->
+                <div id="intro-logo-fallback" class="splash-el w-12 h-12 sm:w-24 sm:h-24 md:w-32 md:h-32 lg:w-48 lg:h-48 bg-white text-black flex items-center justify-center font-bold font-mono rounded-lg text-xl sm:text-5xl md:text-7xl lg:text-8xl shadow-2xl border-4 border-white hidden">
                     N/
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- IMAGE MODAL / LIGHTBOX -->
+    <div id="image-modal" class="hidden fixed inset-0 z-[100] bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-4 opacity-0">
+        <!-- Close overlay (clickable background) -->
+        <div class="absolute inset-0" onclick="closeModal()"></div>
+        
+        <!-- Image Container -->
+        <div class="relative z-10 max-w-6xl w-full h-[85vh] flex flex-col items-center justify-center pointer-events-none">
+            <img id="modal-image" src="" alt="Full View" class="max-w-full max-h-[85%] object-contain shadow-2xl border border-gray-800 pointer-events-auto mb-4">
+            
+            <!-- Modal Title -->
+            <div class="pointer-events-auto text-center space-y-2 max-w-2xl">
+                <h2 id="modal-title" class="text-white text-xl sm:text-2xl font-bold tracking-tight opacity-0 animate-[fadeIn_0.5s_ease_forwards_0.2s]">
+                    <!-- Title Injected Here -->
+                </h2>
+            </div>
+        </div>
+
+        <!-- Return Button -->
+        <button onclick="closeModal()" class="relative z-10 mt-4 px-8 py-3 bg-white text-black font-bold uppercase tracking-widest hover:bg-gray-200 transition-colors rounded-sm text-sm opacity-0 animate-[fadeIn_0.5s_ease_forwards_0.3s]">
+            Return to Gallery
+        </button>
+    </div>
     
+    <!-- FIXED HOME BACKGROUND MARQUEES -->
+    <div id="home-marquees" class="fixed inset-0 z-0 pointer-events-none transition-opacity opacity-100">
+        <!-- 1. Background Angled Marquee -->
+        <div class="absolute top-[65%] left-[60%] -translate-x-1/2 -translate-y-1/2 h-24 w-[200vh] flex items-center justify-center opacity-10 -rotate-12 bg-white mix-blend-difference">
+            <div class="flex animate-marquee whitespace-nowrap min-w-full">
+                 <span class="px-12 font-black text-6xl text-black tracking-widest">NULL NULL NULL NULL NULL NULL NULL NULL NULL NULL NULL NULL NULL NULL</span>
+                 <span class="px-12 font-black text-6xl text-black tracking-widest">NULL NULL NULL NULL NULL NULL NULL NULL NULL NULL NULL NULL NULL NULL</span>
+            </div>
+        </div>
+
+        <!-- 2. Foreground Angled Marquee -->
+        <div class="absolute top-[70%] left-[75%] -translate-x-1/2 -translate-y-1/2 h-24 w-[300vh] flex items-center justify-center opacity-20 rotate-[-70deg] bg-white mix-blend-difference">
+            <div class="flex animate-marquee whitespace-nowrap min-w-full">
+                 <span class="px-12 font-black text-6xl text-black tracking-widest">NULL NULL NULL NULL NULL NULL NULL NULL NULL NULL NULL NULL NULL NULL NULL NULL</span>
+                 <span class="px-12 font-black text-6xl text-black tracking-widest">NULL NULL NULL NULL NULL NULL NULL NULL NULL NULL NULL NULL NULL NULL NULL NULL</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- APP DETAILS MODAL (Play Store Style) -->
+    <div id="app-modal" class="hidden fixed inset-0 z-[100] bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <!-- Close overlay -->
+        <div class="absolute inset-0" onclick="closeAppModal()"></div>
+        
+        <!-- App Content Container -->
+        <div class="relative z-10 w-full max-w-2xl bg-white dark:bg-[#121212] rounded-xl overflow-hidden shadow-2xl transform scale-95 transition-transform duration-300 flex flex-col max-h-[90vh]">
+            
+            <!-- Header: Icon & Title -->
+            <div class="p-6 pb-4 flex gap-5 border-b border-gray-100 dark:border-gray-800 items-start">
+                <img id="app-icon-lg" src="" class="w-20 h-20 rounded-2xl shadow-md object-cover bg-gray-100" alt="App Icon">
+                <div class="flex-1">
+                    <h2 id="app-title" class="text-2xl font-bold text-black dark:text-white leading-tight mb-1">App Name</h2>
+                    <p id="app-developer" class="text-sm text-green-600 dark:text-green-400 font-medium">NullifiedBlank</p>
+                    <div class="flex gap-2 mt-4">
+                        <a id="app-download-btn" href="#" target="_blank" class="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm font-bold py-2 px-4 rounded-full text-center transition-colors shadow-sm">
+                            Install
+                        </a>
+                        <a id="app-github-btn" href="#" target="_blank" class="flex-none border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 py-2 px-4 rounded-full text-sm font-bold transition-colors">
+                            GitHub
+                        </a>
+                    </div>
+                </div>
+                <button onclick="closeAppModal()" class="text-gray-400 hover:text-black dark:hover:text-white p-1">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+
+            <!-- Scrollable Body -->
+            <div class="overflow-y-auto custom-scrollbar flex-1 p-6 pt-4">
+                
+                <!-- Description -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-bold text-black dark:text-white mb-2">About this app</h3>
+                    <p id="app-desc" class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                        Description goes here.
+                    </p>
+                </div>
+
+                <!-- Features Section -->
+                <div id="app-features-container" class="mb-6">
+                    <h3 class="text-sm font-bold text-black dark:text-white mb-2">Key Features</h3>
+                    <ul id="app-features" class="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1 pl-1">
+                        <!-- Features injected here -->
+                    </ul>
+                </div>
+
+                <!-- Screenshots (Horizontal Scroll) -->
+                <div>
+                    <h3 class="text-sm font-bold text-black dark:text-white mb-3">Preview</h3>
+                    <div id="app-screenshots" class="flex gap-3 overflow-x-auto pb-4 snap-x">
+                        <!-- Screenshots injected here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Mobile Overlay -->
     <div id="mobile-overlay" class="fixed inset-0 bg-black/50 z-20 lg:hidden glass backdrop-blur-sm" onclick="toggleSidebar()"></div>
 
@@ -148,9 +301,12 @@
         <!-- Logo Area -->
         <div class="h-16 flex items-center px-6 border-b border-gray-800">
             <div class="flex items-center gap-3 w-full">
-                <div id="sidebar-logo-target" class="w-8 h-8 bg-white text-black flex items-center justify-center font-bold font-mono rounded-sm text-sm shrink-0 opacity-0">
-                    N/
-                </div>
+                <img id="sidebar-logo-target" 
+                     src="assets/logo.png" 
+                     alt="N/" 
+                     onerror="this.src='https://placehold.co/100x100/ffffff/000000?text=N/';"
+                     class="w-8 h-8 object-contain opacity-0">
+                
                 <span id="sidebar-title-target" class="font-bold text-lg tracking-tight whitespace-nowrap overflow-hidden opacity-0">NullifiedBlank</span>
             </div>
         </div>
@@ -165,6 +321,12 @@
             <button onclick="showSection('ui-designs')" id="nav-ui-designs" class="nav-item w-full flex items-center gap-3 px-3 py-3 rounded-md text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-900 transition-colors group text-left">
                 <i data-lucide="layout-template" class="w-4 h-4 text-gray-400 group-hover:text-white transition-colors"></i>
                 UI Designs
+            </button>
+
+            <!-- NEW TAB: Application Development -->
+            <button onclick="showSection('app-dev')" id="nav-app-dev" class="nav-item w-full flex items-center gap-3 px-3 py-3 rounded-md text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-900 transition-colors group text-left">
+                <i data-lucide="box" class="w-4 h-4 text-gray-400 group-hover:text-white transition-colors"></i>
+                Application Dev
             </button>
 
             <button onclick="showSection('graphic-design')" id="nav-graphic-design" class="nav-item w-full flex items-center gap-3 px-3 py-3 rounded-md text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-900 transition-colors group text-left">
@@ -190,7 +352,7 @@
     </aside>
 
     <!-- Main Content -->
-    <main id="main-content" class="flex-1 flex flex-col min-w-0 bg-grid relative transition-colors duration-300">
+    <main id="main-content" class="flex-1 flex flex-col min-w-0 bg-grid relative transition-colors duration-300 pb-12">
         
         <!-- Header -->
         <header class="h-16 bg-white/80 dark:bg-black/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 flex items-center justify-between px-4 lg:px-8 sticky top-0 z-10 transition-colors duration-300">
@@ -208,45 +370,36 @@
                     <i id="theme-icon" data-lucide="sun" class="w-5 h-5"></i>
                 </button>
                 
-                <a href="#" class="px-4 py-1.5 bg-black text-white dark:bg-white dark:text-black text-xs font-bold uppercase tracking-wider hover:opacity-80 transition-opacity rounded-sm">
+                <button onclick="goToConnect()" class="px-4 py-1.5 bg-black text-white dark:bg-white dark:text-black text-xs font-bold uppercase tracking-wider hover:opacity-80 transition-opacity rounded-sm">
                     Contact
-                </a>
+                </button>
             </div>
         </header>
 
         <!-- Scrollable Content Area -->
-        <div class="flex-1 overflow-y-auto p-4 lg:p-12 scroll-smooth">
+        <div id="content-scroll-area" class="flex-1 overflow-y-auto p-4 lg:p-12 scroll-smooth">
             
             <!-- SECTION: HOME -->
-            <div id="home" class="page-section active-section max-w-4xl mx-auto">
-                <div class="py-12 lg:py-20">
+            <div id="home" class="page-section active-section max-w-4xl mx-auto relative">
+                <!-- Home Content -->
+                <div class="py-12 lg:py-20 relative z-10">
                     <p class="font-mono text-sm text-gray-500 mb-4">_Hello World</p>
                     <h1 class="text-5xl lg:text-7xl font-bold tracking-tight mb-8">
-                        Creating digital <br>
-                        <span class="text-gray-400 dark:text-gray-600">voids</span> & structures.
+                        <span id="hero-part-1" class="inline-block" data-value="Creating digital">Creating digital</span> 
+                        <br>
+                        <span id="hero-voids" class="font-mono text-gray-400 dark:text-gray-600 inline-block" data-value="voids">voids</span> 
+                        <span id="hero-part-2" class="inline-block" data-value="& structures.">& structures.</span>
                     </h1>
                     <p class="text-lg text-gray-600 dark:text-gray-400 max-w-2xl leading-relaxed mb-10">
                         I am a multidisciplinary designer and developer focused on monochromatic aesthetics and functional minimalism. I build things that work simply and look stark.
                     </p>
                     <div class="flex gap-4">
-                        <button onclick="showSection('ui-designs')" class="px-6 py-3 bg-black dark:bg-white text-white dark:text-black font-medium text-sm rounded-sm hover:opacity-80 transition-opacity">
-                            View Work
+                        <button onclick="showSection('app-dev')" class="px-6 py-3 bg-black dark:bg-white text-white dark:text-black font-medium text-sm rounded-sm hover:opacity-80 transition-opacity">
+                            View Apps
                         </button>
                         <button onclick="showSection('about')" class="px-6 py-3 border border-black dark:border-white text-black dark:text-white font-medium text-sm rounded-sm hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors">
                             More Info
                         </button>
-                    </div>
-                </div>
-
-                <!-- Featured Preview -->
-                <div class="mt-12 border-t border-gray-200 dark:border-gray-800 pt-12">
-                    <h3 class="font-mono text-xs uppercase tracking-widest text-gray-500 mb-6">Featured Project</h3>
-                    <div class="w-full aspect-video bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 flex items-center justify-center group cursor-pointer relative overflow-hidden">
-                        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors z-10"></div>
-                        <i data-lucide="box" class="w-16 h-16 text-gray-300 dark:text-gray-700 group-hover:scale-110 transition-transform duration-500"></i>
-                        <div class="absolute bottom-4 left-4 bg-white dark:bg-black px-3 py-1 text-xs font-bold border border-gray-200 dark:border-gray-800">
-                            Project Alpha
-                        </div>
                     </div>
                 </div>
             </div>
@@ -257,36 +410,17 @@
                     <h2 class="text-3xl font-bold">UI / UX Projects</h2>
                     <span class="font-mono text-xs text-gray-500">Interface & Systems</span>
                 </div>
+                <div id="ui-designs-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+            </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- UI Item 1 -->
-                    <div class="group cursor-pointer">
-                        <div class="w-full aspect-[4/3] bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 mb-3 overflow-hidden relative">
-                             <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/5 dark:bg-white/5 z-10">
-                                <span class="bg-black text-white dark:bg-white dark:text-black px-3 py-1 text-xs font-mono">View UI Case</span>
-                             </div>
-                             <div class="w-full h-full flex items-center justify-center">
-                                <i data-lucide="layout" class="w-12 h-12 text-gray-300 dark:text-gray-700"></i>
-                             </div>
-                        </div>
-                        <h3 class="text-lg font-bold group-hover:underline decoration-1 underline-offset-4">Monolith UI Kit</h3>
-                        <p class="text-sm text-gray-500">Design System</p>
-                    </div>
-
-                    <!-- UI Item 2 -->
-                    <div class="group cursor-pointer">
-                        <div class="w-full aspect-[4/3] bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 mb-3 overflow-hidden relative">
-                             <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/5 dark:bg-white/5 z-10">
-                                <span class="bg-black text-white dark:bg-white dark:text-black px-3 py-1 text-xs font-mono">View UI Case</span>
-                             </div>
-                             <div class="w-full h-full flex items-center justify-center">
-                                <i data-lucide="smartphone" class="w-12 h-12 text-gray-300 dark:text-gray-700"></i>
-                             </div>
-                        </div>
-                        <h3 class="text-lg font-bold group-hover:underline decoration-1 underline-offset-4">Apex Mobile</h3>
-                        <p class="text-sm text-gray-500">iOS Application</p>
-                    </div>
+            <!-- NEW SECTION: APPLICATION DEVELOPMENT -->
+            <div id="app-dev" class="page-section">
+                <div class="flex items-end justify-between mb-8 border-b border-gray-200 dark:border-gray-800 pb-4">
+                    <h2 class="text-3xl font-bold">Application Development</h2>
+                    <span class="font-mono text-xs text-gray-500">Software & Tools</span>
                 </div>
+                <!-- Dynamic App Grid -->
+                <div id="app-dev-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
             </div>
 
             <!-- SECTION: GRAPHIC DESIGN -->
@@ -295,118 +429,150 @@
                     <h2 class="text-3xl font-bold">Graphic Design</h2>
                     <span class="font-mono text-xs text-gray-500">Branding & Print</span>
                 </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Graphic Item 1 -->
-                    <div class="group cursor-pointer">
-                        <div class="w-full aspect-[4/3] bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 mb-3 overflow-hidden relative">
-                             <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/5 dark:bg-white/5 z-10">
-                                <span class="bg-black text-white dark:bg-white dark:text-black px-3 py-1 text-xs font-mono">View Brand</span>
-                             </div>
-                             <div class="w-full h-full flex items-center justify-center">
-                                <i data-lucide="pen-tool" class="w-12 h-12 text-gray-300 dark:text-gray-700"></i>
-                             </div>
-                        </div>
-                        <h3 class="text-lg font-bold group-hover:underline decoration-1 underline-offset-4">Echo Rebrand</h3>
-                        <p class="text-sm text-gray-500">Identity Design</p>
-                    </div>
-
-                    <!-- Graphic Item 2 -->
-                    <div class="group cursor-pointer">
-                        <div class="w-full aspect-[4/3] bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 mb-3 overflow-hidden relative">
-                             <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/5 dark:bg-white/5 z-10">
-                                <span class="bg-black text-white dark:bg-white dark:text-black px-3 py-1 text-xs font-mono">View Poster</span>
-                             </div>
-                             <div class="w-full h-full flex items-center justify-center">
-                                <i data-lucide="type" class="w-12 h-12 text-gray-300 dark:text-gray-700"></i>
-                             </div>
-                        </div>
-                        <h3 class="text-lg font-bold group-hover:underline decoration-1 underline-offset-4">Typography Series</h3>
-                        <p class="text-sm text-gray-500">Print / Editorial</p>
-                    </div>
-                </div>
+                <div id="graphic-design-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
             </div>
 
-            <!-- SECTION: ART (Renamed from Gallery) -->
+            <!-- SECTION: THE ART GALLERY -->
             <div id="art" class="page-section">
                 <div class="flex items-end justify-between mb-8 border-b border-gray-200 dark:border-gray-800 pb-4">
-                    <h2 class="text-3xl font-bold">Selected Art</h2>
+                    <h2 class="text-3xl font-bold">The Art Gallery</h2>
                     <span class="font-mono text-xs text-gray-500">Visual Experiments</span>
                 </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="group cursor-pointer">
-                        <div class="w-full aspect-[4/3] bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 mb-3 overflow-hidden relative">
-                             <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/5 dark:bg-white/5 z-10">
-                                <span class="bg-black text-white dark:bg-white dark:text-black px-3 py-1 text-xs font-mono">View Art</span>
-                             </div>
-                             <div class="w-full h-full flex items-center justify-center">
-                                <i data-lucide="palette" class="w-12 h-12 text-gray-300 dark:text-gray-700"></i>
-                             </div>
-                        </div>
-                        <h3 class="text-lg font-bold group-hover:underline decoration-1 underline-offset-4">Digital Canvas</h3>
-                        <p class="text-sm text-gray-500">Illustration</p>
-                    </div>
-
-                    <div class="group cursor-pointer">
-                        <div class="w-full aspect-[4/3] bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 mb-3 overflow-hidden relative">
-                             <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/5 dark:bg-white/5 z-10">
-                                <span class="bg-black text-white dark:bg-white dark:text-black px-3 py-1 text-xs font-mono">View Art</span>
-                             </div>
-                             <div class="w-full h-full flex items-center justify-center">
-                                <i data-lucide="camera" class="w-12 h-12 text-gray-300 dark:text-gray-700"></i>
-                             </div>
-                        </div>
-                        <h3 class="text-lg font-bold group-hover:underline decoration-1 underline-offset-4">Urban Decay</h3>
-                        <p class="text-sm text-gray-500">Photography</p>
-                    </div>
-                </div>
+                <div id="art-gallery-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
             </div>
 
             <!-- SECTION: ABOUT -->
-            <div id="about" class="page-section max-w-3xl">
+            <div id="about" class="page-section max-w-4xl">
                 <div class="mb-12 border-b border-gray-200 dark:border-gray-800 pb-4">
                     <h2 class="text-3xl font-bold">About Me</h2>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
-                    <div class="md:col-span-2 space-y-6 text-base leading-relaxed text-gray-700 dark:text-gray-300">
+                    <div class="md:col-span-2 space-y-8 text-base leading-relaxed text-gray-700 dark:text-gray-300">
                         <p>
-                            I specialize in creating user interfaces that prioritize clarity and speed. With a background in both graphic design and computer science, I bridge the gap between aesthetics and engineering.
-                        </p>
-                        <p>
-                            My philosophy is "Nullified Blank" — starting from absolute zero to build something that feels inevitable. I avoid decoration for the sake of decoration. Every pixel serves a purpose.
+                            Versatile professional with experience across customer service, web development, design, and client support. Skilled in building and managing websites, creating landing pages, and handling both technical and creative projects. Adaptable, detail-oriented, and able to bridge communication, problem-solving, and technical execution in any role.
                         </p>
                         
                         <div class="pt-6">
-                            <h3 class="font-bold mb-4 text-black dark:text-white">Experience</h3>
-                            <ul class="space-y-4">
+                            <h3 class="font-bold mb-6 text-xl text-black dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">Experience</h3>
+                            <ul class="space-y-8">
                                 <li>
-                                    <div class="flex justify-between items-baseline">
-                                        <span class="font-bold">Senior Product Designer</span>
-                                        <span class="font-mono text-xs text-gray-500">2021-Present</span>
+                                    <div class="flex justify-between items-baseline mb-1">
+                                        <span class="font-bold text-lg text-black dark:text-white">Campaign Support / Web Admin</span>
+                                        <span class="font-mono text-xs text-gray-500">2024</span>
                                     </div>
-                                    <span class="text-sm text-gray-500">TechCorp Inc.</span>
+                                    <span class="text-sm font-medium text-gray-500 block mb-2">Snoball Events</span>
+                                    <p class="text-sm">Began as campaign support, later specialized in website administration and landing page development. Managed coding, design, and ongoing site/page maintenance for client campaigns.</p>
+                                </li>
+                                <li>
+                                    <div class="flex justify-between items-baseline mb-1">
+                                        <span class="font-bold text-lg text-black dark:text-white">Intake Specialist</span>
+                                        <span class="font-mono text-xs text-gray-500">2024</span>
+                                    </div>
+                                    <span class="text-sm font-medium text-gray-500 block mb-2">LawyerForWorkers</span>
+                                    <p class="text-sm">Handled client inquiries and matched cases to the right attorneys. Strengthened organizational, client management, and communication skills.</p>
+                                </li>
+                                <li>
+                                    <div class="flex justify-between items-baseline mb-1">
+                                        <span class="font-bold text-lg text-black dark:text-white">Digital Illustrator / Web Dev</span>
+                                        <span class="font-mono text-xs text-gray-500">2021-Current</span>
+                                    </div>
+                                    <span class="text-sm font-medium text-gray-500 block mb-2">Freelance</span>
+                                    <p class="text-sm">Delivered custom digital illustrations, websites, and designs for diverse clients. Gained hands-on experience in creative design, coding, and project management.</p>
+                                </li>
+                                <li>
+                                    <div class="flex justify-between items-baseline mb-1">
+                                        <span class="font-bold text-lg text-black dark:text-white">Customer Service Specialist</span>
+                                        <span class="font-mono text-xs text-gray-500">2021-2023</span>
+                                    </div>
+                                    <span class="text-sm font-medium text-gray-500 block mb-2">Gannett via Foundever</span>
+                                    <p class="text-sm">Provided front-line customer support and issue resolution across multiple channels. Built strong communication, problem-solving, and client relations skills.</p>
                                 </li>
                             </ul>
                         </div>
                     </div>
 
-                    <div class="md:col-span-1 border-l border-gray-200 dark:border-gray-800 pl-8 space-y-8">
+                    <div class="md:col-span-1 border-l border-gray-200 dark:border-gray-800 pl-8 space-y-10">
+                        <!-- Skills Section -->
                         <div>
-                            <h3 class="font-mono text-xs uppercase tracking-widest text-gray-500 mb-3">Stack</h3>
-                            <div class="flex flex-wrap gap-2">
-                                <span class="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-xs rounded-sm">HTML/CSS</span>
-                                <span class="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-xs rounded-sm">React</span>
+                            <h3 class="font-mono text-xs uppercase tracking-widest text-gray-500 mb-6">Skills</h3>
+                            <div class="space-y-5">
+                                <div>
+                                    <div class="flex justify-between text-xs mb-1">
+                                        <span class="font-bold text-black dark:text-white">Web Development</span>
+                                        <span class="font-mono text-gray-500">5/5</span>
+                                    </div>
+                                    <div class="w-full bg-gray-100 dark:bg-gray-900 h-1.5 rounded-full overflow-hidden">
+                                        <div class="bg-black dark:bg-white h-full" style="width: 100%"></div>
+                                    </div>
+                                    <p class="text-[10px] text-gray-500 mt-1">HTML, CSS, JS, WordPress</p>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-xs mb-1">
+                                        <span class="font-bold text-black dark:text-white">Web Design</span>
+                                        <span class="font-mono text-gray-500">4.5/5</span>
+                                    </div>
+                                    <div class="w-full bg-gray-100 dark:bg-gray-900 h-1.5 rounded-full overflow-hidden">
+                                        <div class="bg-black dark:bg-white h-full" style="width: 90%"></div>
+                                    </div>
+                                    <p class="text-[10px] text-gray-500 mt-1">UI/UX, Framer, Figma</p>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-xs mb-1">
+                                        <span class="font-bold text-black dark:text-white">Digital Illustration</span>
+                                        <span class="font-mono text-gray-500">5/5</span>
+                                    </div>
+                                    <div class="w-full bg-gray-100 dark:bg-gray-900 h-1.5 rounded-full overflow-hidden">
+                                        <div class="bg-black dark:bg-white h-full" style="width: 100%"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-xs mb-1">
+                                        <span class="font-bold text-black dark:text-white">Website Admin</span>
+                                        <span class="font-mono text-gray-500">4.5/5</span>
+                                    </div>
+                                    <div class="w-full bg-gray-100 dark:bg-gray-900 h-1.5 rounded-full overflow-hidden">
+                                        <div class="bg-black dark:bg-white h-full" style="width: 90%"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-xs mb-1">
+                                        <span class="font-bold text-black dark:text-white">Graphic Design</span>
+                                        <span class="font-mono text-gray-500">4/5</span>
+                                    </div>
+                                    <div class="w-full bg-gray-100 dark:bg-gray-900 h-1.5 rounded-full overflow-hidden">
+                                        <div class="bg-black dark:bg-white h-full" style="width: 80%"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-xs mb-1">
+                                        <span class="font-bold text-black dark:text-white">Project Management</span>
+                                        <span class="font-mono text-gray-500">4/5</span>
+                                    </div>
+                                    <div class="w-full bg-gray-100 dark:bg-gray-900 h-1.5 rounded-full overflow-hidden">
+                                        <div class="bg-black dark:bg-white h-full" style="width: 80%"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-xs mb-1">
+                                        <span class="font-bold text-black dark:text-white">CRM Tools</span>
+                                        <span class="font-mono text-gray-500">4/5</span>
+                                    </div>
+                                    <div class="w-full bg-gray-100 dark:bg-gray-900 h-1.5 rounded-full overflow-hidden">
+                                        <div class="bg-black dark:bg-white h-full" style="width: 80%"></div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div>
+
+                        <!-- Connect Section -->
+                        <div id="connect-section" class="p-4 rounded-lg transition-all duration-300">
                             <h3 class="font-mono text-xs uppercase tracking-widest text-gray-500 mb-3">Connect</h3>
                             <ul class="space-y-2 text-sm">
-                                <li><a href="#" class="hover:underline">Twitter / X</a></li>
-                                <li><a href="#" class="hover:underline">LinkedIn</a></li>
-                                <li><a href="#" class="hover:underline">GitHub</a></li>
-                                <li><a href="#" class="hover:underline">Email Me</a></li>
+                                <li><a href="https://x.com/Nullified_Blank" target="_blank" class="hover:underline">Twitter / X</a></li>
+                                <li><a href="https://www.instagram.com/nullifiedblank" target="_blank" class="hover:underline">Instagram</a></li>
+                                <li><a href="https://www.facebook.com/NullifiedBlank" target="_blank" class="hover:underline">Facebook</a></li>
+                                <li><a href="mailto:craigbilag@gmail.com" class="hover:underline">Email Me</a></li>
                             </ul>
                         </div>
                     </div>
@@ -420,95 +586,360 @@
         // Initialize Icons
         lucide.createIcons();
 
-        // 1. Wait for Fonts & Content to load properly
-        document.fonts.ready.then(() => {
-            initAnimation();
+        // ---------------------------------------------------------
+        // PORTFOLIO CONFIGURATION - UPDATE THIS LIST AS YOU ADD FILES
+        // ---------------------------------------------------------
+        
+        // APP PROJECTS CONFIG
+        const appProjects = [
+            {
+                title: "TaskMaster Pro",
+                developer: "NullifiedBlank",
+                icon: "apps/icons/task_icon.png", // Icon file
+                description: "A streamlined task management application built for high-performance teams. Features real-time sync, dark mode, and integrated calendar view.",
+                features: [
+                    "Real-time team synchronization",
+                    "Integrated calendar view",
+                    "Customizable dark/light themes",
+                    "Priority tagging & filtering"
+                ],
+                screenshots: ["apps/screens/task1.png", "apps/screens/task2.png", "apps/screens/task3.png"],
+                github: "https://github.com/NullifiedBlank",
+                download: "#"
+            },
+            {
+                title: "Budget Tracker",
+                developer: "NullifiedBlank",
+                icon: "apps/icons/budget_icon.png",
+                description: "Personal finance tracking made simple. Visualize expenses, set goals, and export monthly reports with ease.",
+                features: [
+                    "Visual expense charts",
+                    "Goal setting & tracking",
+                    "Monthly PDF report export",
+                    "Secure local data storage"
+                ],
+                screenshots: ["apps/screens/budget1.png", "apps/screens/budget2.png"],
+                github: "https://github.com/NullifiedBlank",
+                download: "#"
+            }
+        ];
+
+        const uiProjects = [
+            { 
+                html: "OnlineJobsRedesign.html", 
+                img: "onlinejobs_thumb.png", // Make sure this image exists!
+                title: "OnlineJobs Redesign", 
+                subtitle: "Platform Revamp" 
+            },
+            { 
+                html: "monolith_ui.html", 
+                img: "monolith_thumb.png", 
+                title: "Monolith UI Kit", 
+                subtitle: "Design System" 
+            },
+            { 
+                html: "apex_mobile.html", 
+                img: "apex_thumb.png", 
+                title: "Apex Mobile", 
+                subtitle: "iOS Application" 
+            },
+            { 
+                html: "dashboard_concept.html", 
+                img: "dash_thumb.png", 
+                title: "Analytic Dashboard", 
+                subtitle: "Web App Concept" 
+            }
+        ];
+
+        const artFiles = [
+            "SampleImageFile.png",
+            "Digital_Canvas.png",
+            "Urban_Decay.png",
+            "Neon_Structure.png", 
+            "Abstract_Glitch.png" 
+        ];
+
+        const graphicFiles = [
+            "sample.png",
+            "Echo_Rebrand.png", 
+            "Typography_Series.png",
+            "Minimalist_Poster.png" 
+        ];
+
+        // ---------------------------------------------------------
+
+        window.addEventListener('load', () => {
+            document.fonts.ready.then(() => {
+                initAnimation();
+                renderGalleries(); 
+            });
         });
+
+        function renderGalleries() {
+            renderGrid('art-gallery-grid', 'art', artFiles, 'View Art', true);
+            renderGrid('graphic-design-grid', 'graphic', graphicFiles, 'View Design', false);
+            renderUIGrid();
+            renderAppGrid(); // New function call
+            lucide.createIcons(); 
+        }
+
+        // --- NEW: APP RENDERER ---
+        function renderAppGrid() {
+            const container = document.getElementById('app-dev-grid');
+            if(!container) return;
+            container.innerHTML = '';
+
+            appProjects.forEach((app, index) => {
+                const itemHTML = `
+                    <div class="group cursor-pointer bg-white dark:bg-zinc-900 border border-gray-200 dark:border-gray-800 p-4 rounded-xl hover:border-black dark:hover:border-white transition-colors" onclick="openAppModal(${index})">
+                        <div class="flex items-start gap-4">
+                            <img src="${app.icon}" 
+                                 onerror="this.src='https://placehold.co/100x100/1a1a1a/ffffff?text=App';" 
+                                 alt="${app.title}" 
+                                 class="w-16 h-16 rounded-xl object-cover shadow-sm bg-gray-100">
+                            <div class="flex-1 min-w-0">
+                                <h3 class="text-base font-bold text-black dark:text-white truncate">${app.title}</h3>
+                                <p class="text-xs text-gray-500 mb-2 truncate">${app.developer}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += itemHTML;
+            });
+        }
+
+        // --- NEW: APP MODAL LOGIC ---
+        function openAppModal(index) {
+            const app = appProjects[index];
+            const modal = document.getElementById('app-modal');
+            
+            // Populate Data
+            document.getElementById('app-icon-lg').src = app.icon;
+            document.getElementById('app-icon-lg').onerror = function() { this.src='https://placehold.co/100x100/1a1a1a/ffffff?text=App'; };
+            document.getElementById('app-title').innerText = app.title;
+            document.getElementById('app-developer').innerText = app.developer;
+            document.getElementById('app-desc').innerText = app.description;
+            document.getElementById('app-download-btn').href = app.download;
+            document.getElementById('app-github-btn').href = app.github;
+
+            // Populate Features
+            const featuresList = document.getElementById('app-features');
+            const featuresContainer = document.getElementById('app-features-container');
+            
+            if (featuresList) {
+                featuresList.innerHTML = '';
+                if (app.features && app.features.length > 0) {
+                    if(featuresContainer) featuresContainer.style.display = 'block';
+                    app.features.forEach(feature => {
+                        featuresList.innerHTML += `<li>${feature}</li>`;
+                    });
+                } else {
+                    if(featuresContainer) featuresContainer.style.display = 'none';
+                }
+            }
+
+            // Populate Screenshots
+            const screenContainer = document.getElementById('app-screenshots');
+            screenContainer.innerHTML = '';
+            app.screenshots.forEach(src => {
+                screenContainer.innerHTML += `
+                    <img src="${src}" 
+                         onerror="this.src='https://placehold.co/300x500/2a2a2a/ffffff?text=Screen';" 
+                         class="h-64 w-auto rounded-lg shadow-md snap-center border border-gray-100 dark:border-gray-800">
+                `;
+            });
+
+            // Show Modal
+            modal.classList.remove('hidden');
+            // Trigger reflow
+            void modal.offsetWidth;
+            modal.classList.remove('opacity-0');
+            modal.querySelector('div.relative').classList.remove('scale-95');
+            modal.querySelector('div.relative').classList.add('scale-100');
+        }
+
+        function closeAppModal() {
+            const modal = document.getElementById('app-modal');
+            modal.classList.add('opacity-0');
+            modal.querySelector('div.relative').classList.add('scale-95');
+            modal.querySelector('div.relative').classList.remove('scale-100');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        // ... existing UIGrid and Grid renderers ...
+        function renderUIGrid() {
+            const container = document.getElementById('ui-designs-grid');
+            if(!container) return;
+            container.innerHTML = ''; 
+            uiProjects.forEach(project => {
+                const link = `uidesigns/${project.html}`;
+                const imgSrc = `uidesigns/${project.img}`;
+                const itemHTML = `
+                    <a href="${link}" target="_blank" class="group cursor-pointer block">
+                        <div class="w-full aspect-[4/3] bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 mb-3 overflow-hidden relative">
+                             <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/5 dark:bg-white/5 z-10">
+                                <span class="bg-black text-white dark:bg-white dark:text-black px-3 py-1 text-xs font-mono">Open Project</span>
+                             </div>
+                             <img src="${imgSrc}" onerror="this.onerror=null; this.src='https://placehold.co/800x600/1a1a1a/ffffff?text=UI+Preview';" alt="${project.title}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
+                        </div>
+                        <h3 class="text-lg font-bold group-hover:underline decoration-1 underline-offset-4">${project.title}</h3>
+                        <p class="text-sm text-gray-500">${project.subtitle}</p>
+                    </a>
+                `;
+                container.innerHTML += itemHTML;
+            });
+        }
+
+        function renderGrid(containerId, folder, files, btnText, useModal) {
+            const container = document.getElementById(containerId);
+            if(!container) return;
+            container.innerHTML = ''; 
+            files.forEach(file => {
+                const title = file.replace(/\.[^/.]+$/, "").replace(/_/g, " ");
+                const imgSrc = `${folder}/${file}`;
+                const fallbackTxt = folder === 'art' ? 'Art+Preview' : 'Design+Preview';
+                const itemHTML = `
+                    <div class="group cursor-pointer" ${useModal ? `onclick="openModal(this, '${title}')"` : ''}>
+                        <div class="w-full aspect-[4/3] bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 mb-3 overflow-hidden relative">
+                             <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/5 dark:bg-white/5 z-10">
+                                <span class="bg-black text-white dark:bg-white dark:text-black px-3 py-1 text-xs font-mono">${btnText}</span>
+                             </div>
+                             <img src="${imgSrc}" onerror="this.onerror=null; this.src='https://placehold.co/800x600/1a1a1a/ffffff?text=${fallbackTxt}';" alt="${title}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
+                        </div>
+                        <h3 class="text-lg font-bold group-hover:underline decoration-1 underline-offset-4">${title}</h3>
+                    </div>
+                `;
+                container.innerHTML += itemHTML;
+            });
+        }
 
         function initAnimation() {
             const splashContainer = document.getElementById('splash-container');
-            
+            // Guard clause for splashContainer
+            if (!splashContainer) return;
+
             setTimeout(() => {
                 splashContainer.style.opacity = '1';
                 splashContainer.style.transition = 'opacity 0.8s ease-out';
             }, 100);
 
-            // Trigger Morph & Dissolve
             setTimeout(() => {
                 triggerMorph();
-            }, 2000); // Wait for impact
+            }, 2000); 
+        }
+
+        const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+";
+
+        function glitchText(element, loop = false) {
+            if(!element) return;
+            const originalText = element.dataset.value;
+            let iteration = 0;
+            
+            clearInterval(element.dataset.interval);
+
+            element.dataset.interval = setInterval(() => {
+                element.innerText = originalText.split("").map((letter, index) => {
+                    if(index < iteration) return originalText[index];
+                    return letters[Math.floor(Math.random() * letters.length)];
+                }).join("");
+                if(iteration >= originalText.length) clearInterval(element.dataset.interval);
+                iteration += 1 / 3; 
+            }, 30);
         }
 
         function triggerMorph() {
             const introLogo = document.getElementById('intro-logo');
+            const introLogoFallback = document.getElementById('intro-logo-fallback');
+            
+            // Check if essential elements exist
+            if (!introLogo) return;
+
+            const activeIntroLogo = (introLogo.style.display === 'none' && introLogoFallback) ? introLogoFallback : introLogo;
             const introNullified = document.getElementById('intro-nullified');
             const introBlank = document.getElementById('intro-blank');
             const splashContainer = document.getElementById('splash-container');
-            
             const targetLogo = document.getElementById('sidebar-logo-target');
             const targetTitle = document.getElementById('sidebar-title-target');
             const splashScreen = document.getElementById('splash-screen');
 
-            // 1. Fade out background
+            if (!splashScreen || !targetLogo || !targetTitle) return;
+
             splashScreen.style.opacity = '0';
+            void activeIntroLogo.offsetWidth; 
 
-            // Ensure transform-origin is set BEFORE measurement
-            void introLogo.offsetWidth; 
-
-            // 2. Get Coordinates
             const destLogoRect = targetLogo.getBoundingClientRect();
             const destTitleRect = targetTitle.getBoundingClientRect();
-            
-            const startLogoRect = introLogo.getBoundingClientRect();
-            const startNullifiedRect = introNullified.getBoundingClientRect();
-            const startBlankRect = introBlank.getBoundingClientRect();
+            const startLogoRect = activeIntroLogo.getBoundingClientRect();
+            const startNullifiedRect = introNullified ? introNullified.getBoundingClientRect() : { left: 0, top: 0, height: 1 };
+            const startBlankRect = introBlank ? introBlank.getBoundingClientRect() : { left: 0, top: 0, height: 1 };
 
-            // 3. Deltas & Scales
             const logoDeltaX = destLogoRect.left - startLogoRect.left;
             const logoDeltaY = destLogoRect.top - startLogoRect.top;
-            const scaleLogo = destLogoRect.width / startLogoRect.width;
+            const scaleLogo = startLogoRect.width ? destLogoRect.width / startLogoRect.width : 1;
 
             const nullifiedDeltaX = destTitleRect.left - startNullifiedRect.left;
             const nullifiedDeltaY = destTitleRect.top - startNullifiedRect.top;
-            const scaleNullified = destTitleRect.height / startNullifiedRect.height; 
+            const scaleNullified = startNullifiedRect.height ? destTitleRect.height / startNullifiedRect.height : 1; 
             
             const blankDestX = destTitleRect.left + (destTitleRect.width * 0.55); 
             const blankDeltaX = blankDestX - startBlankRect.left;
             const blankDeltaY = destTitleRect.top - startBlankRect.top;
-            const scaleBlank = destTitleRect.height / startBlankRect.height;
+            const scaleBlank = startBlankRect.height ? destTitleRect.height / startBlankRect.height : 1;
 
-            // 4. Animate
             const timing = '1.5s cubic-bezier(0.85, 0, 0.15, 1)';
             
-            introLogo.style.transition = `transform ${timing}`;
-            introLogo.style.transform = `translate(${logoDeltaX}px, ${logoDeltaY}px) scale(${scaleLogo})`;
+            activeIntroLogo.style.transition = `transform ${timing}`;
+            activeIntroLogo.style.transform = `translate(${logoDeltaX}px, ${logoDeltaY}px) scale(${scaleLogo})`;
 
-            introNullified.style.transition = `transform ${timing}`;
-            introNullified.style.transform = `translate(${nullifiedDeltaX}px, ${nullifiedDeltaY}px) scale(${scaleNullified})`;
+            if (introNullified) {
+                introNullified.style.transition = `transform ${timing}`;
+                introNullified.style.transform = `translate(${nullifiedDeltaX}px, ${nullifiedDeltaY}px) scale(${scaleNullified})`;
+            }
 
-            introBlank.style.transition = `transform ${timing}`;
-            introBlank.style.transform = `translate(${blankDeltaX}px, ${blankDeltaY}px) scale(${scaleBlank})`;
+            if (introBlank) {
+                introBlank.style.transition = `transform ${timing}`;
+                introBlank.style.transform = `translate(${blankDeltaX}px, ${blankDeltaY}px) scale(${scaleBlank})`;
+            }
             
-            // 5. Cleanup
             setTimeout(() => {
-                splashContainer.style.opacity = '0';
-                splashContainer.style.transition = 'opacity 0.2s';
-
-                targetLogo.style.opacity = '1';
-                targetLogo.style.transition = 'opacity 0.3s';
+                if (splashContainer) {
+                    splashContainer.style.opacity = '0';
+                    splashContainer.style.transition = 'opacity 0.2s';
+                }
                 
-                targetTitle.style.opacity = '1';
-                targetTitle.style.transition = 'opacity 0.3s';
+                if (targetLogo) {
+                    targetLogo.style.opacity = '1';
+                    targetLogo.style.transition = 'opacity 0.3s';
+                }
+                if (targetTitle) {
+                    targetTitle.style.opacity = '1';
+                    targetTitle.style.transition = 'opacity 0.3s';
+                }
+                
+                const part1 = document.getElementById('hero-part-1');
+                const voids = document.getElementById('hero-voids');
+                const part2 = document.getElementById('hero-part-2');
+                
+                if (part1) glitchText(part1);
+                if (voids) {
+                    glitchText(voids);
+                    setInterval(() => { glitchText(voids); }, 4000);
+                }
+                if (part2) glitchText(part2);
+                 
             }, 1500); 
             
-            setTimeout(() => {
-                splashScreen.style.display = 'none';
+            setTimeout(() => { 
+                if (splashScreen) splashScreen.style.display = 'none'; 
             }, 1800);
         }
 
-        // Dark Mode Logic
-        const html = document.documentElement;
+        // ... existing navigation functions ...
         function toggleDarkMode() {
+            const html = document.documentElement;
             html.classList.toggle('dark');
             const themeBtn = document.querySelector('button[onclick="toggleDarkMode()"]');
             const isDark = html.classList.contains('dark');
@@ -520,11 +951,9 @@
             lucide.createIcons();
         }
 
-        // Sidebar Logic
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('mobile-overlay');
-            
             if (sidebar.classList.contains('-translate-x-full')) {
                 sidebar.classList.remove('-translate-x-full');
                 overlay.classList.remove('hidden');
@@ -534,10 +963,39 @@
             }
         }
 
+        // Added module-level variable to track the timer
+        let marqueeTimeout;
+
         function showSection(sectionId) {
             document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active-section'));
             const target = document.getElementById(sectionId);
-            if (target) target.classList.add('active-section');
+            if (target) {
+                target.classList.add('active-section');
+                document.getElementById('content-scroll-area').scrollTo({top: 0, behavior: 'smooth'});
+            }
+            
+            // Updated Marquee Logic: Instant Hiding on Exit
+            const marquees = document.getElementById('home-marquees');
+            if (marquees) {
+                if (sectionId === 'home') {
+                    // ENTERING HOME: Smooth Fade In
+                    marquees.classList.remove('hidden');
+                    
+                    // Force reflow
+                    void marquees.offsetWidth;
+                    
+                    // Trigger fade in (slow)
+                    marquees.classList.remove('opacity-0');
+                    marquees.classList.add('duration-1000'); 
+                } else {
+                    // LEAVING HOME: INSTANT HIDE
+                    // No fade out, no delay. Just gone.
+                    marquees.classList.add('hidden');
+                    marquees.classList.add('opacity-0');
+                    // Reset duration for next entry
+                    marquees.classList.remove('duration-1000');
+                }
+            }
 
             document.querySelectorAll('.nav-item').forEach(nav => {
                 nav.classList.remove('active');
@@ -545,7 +1003,6 @@
                 if(i) { i.classList.remove('text-black'); i.classList.add('text-gray-400'); }
                 nav.classList.remove('text-black'); nav.classList.add('text-gray-400');
             });
-
             const active = document.getElementById('nav-' + sectionId);
             if (active) {
                 active.classList.add('active');
@@ -553,11 +1010,70 @@
                 const i = active.querySelector('svg') || active.querySelector('i');
                 if(i) i.classList.remove('text-gray-400');
             }
-            
             if (window.innerWidth < 1024) {
                const sidebar = document.getElementById('sidebar');
-               if (!sidebar.classList.contains('-translate-x-full')) toggleSidebar();
+               if (sidebar && !sidebar.classList.contains('-translate-x-full')) toggleSidebar();
             }
+        }
+
+        function goToConnect() {
+            showSection('about');
+            setTimeout(() => {
+                const connectSection = document.getElementById('connect-section');
+                if(connectSection) {
+                    connectSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    connectSection.classList.add('highlight-connect');
+                    setTimeout(() => {
+                        connectSection.classList.remove('highlight-connect');
+                    }, 2500);
+                }
+            }, 300);
+        }
+
+        function openModal(element, titleText) {
+            const thumbImg = element.querySelector('img');
+            const modal = document.getElementById('image-modal');
+            const modalImg = document.getElementById('modal-image');
+            const modalTitle = document.getElementById('modal-title');
+            
+            if(!thumbImg) return;
+
+            modalImg.src = thumbImg.src;
+            modalTitle.innerText = titleText || 'Untitled';
+
+            modal.classList.remove('hidden');
+            modal.classList.add('opacity-0');
+            
+            void modal.offsetWidth;
+
+            const startRect = thumbImg.getBoundingClientRect();
+            const destRect = modalImg.getBoundingClientRect();
+
+            const scaleX = startRect.width / destRect.width;
+            const scaleY = startRect.height / destRect.height;
+            const translateX = startRect.left - destRect.left;
+            const translateY = startRect.top - destRect.top;
+
+            modalImg.style.transition = 'none';
+            modalImg.style.transformOrigin = 'top left';
+            modalImg.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scaleX}, ${scaleY})`;
+
+            requestAnimationFrame(() => {
+                modal.classList.remove('opacity-0'); 
+
+                modalImg.style.transition = 'transform 0.5s cubic-bezier(0.2, 0, 0.2, 1)';
+                modalImg.style.transform = 'none';
+            });
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('image-modal');
+            
+            modal.classList.add('opacity-0');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300); 
         }
     </script>
 </body>
