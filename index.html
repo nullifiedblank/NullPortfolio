@@ -177,7 +177,7 @@
                 <h1 id="intro-blank" class="splash-el text-white font-extrabold tracking-tighter text-5xl sm:text-9xl md:text-11xl lg:text-massive leading-none">
                     Blank
                 </h1>
-                <!-- UPDATED: Image Logo instead of Text Box -->
+                <!-- Image Logo -->
                 <img id="intro-logo" 
                      src="logo.png" 
                      alt="N/"
@@ -633,6 +633,12 @@
 
         const uiProjects = [
             { 
+                html: "ModernShoppingSiteDesign.html", 
+                img: "ModernShoppingSiteDesign_thumb.png", 
+                title: "Modern Shopping Site", 
+                subtitle: "E-commerce Interface" 
+            },
+            { 
                 html: "OnlineJobsRedesign.html", 
                 img: "onlinejobs_thumb.png", 
                 title: "OnlineJobs Redesign", 
@@ -906,17 +912,24 @@
             if (!splashScreen || !targetLogo || !targetTitle) return;
 
             splashScreen.style.opacity = '0';
-            void activeIntroLogo.offsetWidth; 
+            
+            // Measure safely
+            let startLogoRect = { left: 0, top: 0, width: 0 };
+            if (activeIntroLogo) {
+                void activeIntroLogo.offsetWidth; 
+                startLogoRect = activeIntroLogo.getBoundingClientRect();
+            }
 
             const destLogoRect = targetLogo.getBoundingClientRect();
             const destTitleRect = targetTitle.getBoundingClientRect();
-            const startLogoRect = activeIntroLogo.getBoundingClientRect();
+            
             const startNullifiedRect = introNullified ? introNullified.getBoundingClientRect() : { left: 0, top: 0, height: 1 };
             const startBlankRect = introBlank ? introBlank.getBoundingClientRect() : { left: 0, top: 0, height: 1 };
 
-            const logoDeltaX = destLogoRect.left - startLogoRect.left;
-            const logoDeltaY = destLogoRect.top - startLogoRect.top;
-            const scaleLogo = startLogoRect.width ? destLogoRect.width / startLogoRect.width : 1;
+            // Deltas
+            const logoDeltaX = activeIntroLogo ? destLogoRect.left - startLogoRect.left : 0;
+            const logoDeltaY = activeIntroLogo ? destLogoRect.top - startLogoRect.top : 0;
+            const scaleLogo = (activeIntroLogo && startLogoRect.width) ? destLogoRect.width / startLogoRect.width : 1;
 
             const nullifiedDeltaX = destTitleRect.left - startNullifiedRect.left;
             const nullifiedDeltaY = destTitleRect.top - startNullifiedRect.top;
@@ -929,8 +942,11 @@
 
             const timing = '1.5s cubic-bezier(0.85, 0, 0.15, 1)';
             
-            activeIntroLogo.style.transition = `transform ${timing}`;
-            activeIntroLogo.style.transform = `translate(${logoDeltaX}px, ${logoDeltaY}px) scale(${scaleLogo})`;
+            // Transforms
+            if (activeIntroLogo) {
+                activeIntroLogo.style.transition = `transform ${timing}`;
+                activeIntroLogo.style.transform = `translate(${logoDeltaX}px, ${logoDeltaY}px) scale(${scaleLogo})`;
+            }
 
             if (introNullified) {
                 introNullified.style.transition = `transform ${timing}`;
