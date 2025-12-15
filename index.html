@@ -698,7 +698,18 @@
         });
 
         function renderGalleries() {
-            renderGrid('art-gallery-grid', 'art', artFiles, 'View Art', true);
+            // Sort art files by year (descending: 2025 -> 2024 -> ...)
+            const sortedArtFiles = [...artFiles].sort((a, b) => {
+                // Extract year from filename (e.g., "Name 2025.jpg" -> 2025)
+                const getYear = (filename) => {
+                    const match = filename.match(/(\d{4})(?=\.[^.]+$)/);
+                    return match ? parseInt(match[0]) : 0;
+                };
+                return getYear(b) - getYear(a);
+            });
+
+            renderGrid('art-gallery-grid', 'art', sortedArtFiles, 'View Art', true);
+            
             // Updated folder name from 'graphic' to 'graphics', set useModal to true
             renderGrid('graphic-design-grid', 'graphics', graphicFiles, 'View Design', true);
             renderUIGrid();
