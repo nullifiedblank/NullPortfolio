@@ -163,6 +163,17 @@
             0%, 100% { outline-color: transparent; }
             50% { outline-color: black; }
         }
+
+        /* --- FLASH ANIMATION CLASSES --- */
+        .flash-active {
+            background-color: #ffffff !important;
+            color: #050505 !important;
+        }
+        .flash-invert {
+            background-color: #050505 !important;
+            color: #ffffff !important;
+            box-shadow: inset 0 0 0 1px #333; /* subtle border to separate from bg */
+        }
     </style>
 </head>
 <body class="bg-white dark:bg-black text-black dark:text-white font-sans h-screen flex overflow-hidden selection:bg-black selection:text-white dark:selection:bg-white dark:selection:text-black transition-colors duration-300">
@@ -290,6 +301,13 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- ADDED: Onboarding Toast -->
+    <div id="explore-toast" class="fixed z-[90] bg-white text-black px-4 py-2 rounded shadow-xl font-bold text-sm flex items-center gap-2 opacity-0 pointer-events-none transition-all duration-500 -translate-x-4 border border-gray-200" style="top: 100px;">
+        <!-- Left Arrow SVG -->
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+        <span>Explore my work!</span>
     </div>
 
     <!-- Mobile Overlay -->
@@ -978,147 +996,113 @@
             
             setTimeout(() => { 
                 if (splashScreen) splashScreen.style.display = 'none'; 
+                
+                // --- TRIGGER ONBOARDING ANIMATION ---
+                triggerOnboarding();
+                
             }, 1800);
+        }
+
+        // --- ONBOARDING SEQUENCE ---
+        function triggerOnboarding() {
+            const navItems = document.querySelectorAll('.nav-item');
+            const toast = document.getElementById('explore-toast');
+            const sidebar = document.getElementById('sidebar');
+
+            if (!sidebar) return;
+
+            // Animate each nav item sequentially
+            navItems.forEach((item, index) => {
+                // Determine which class to toggle:
+                // If item is already active (White), we invert it (Black) to flash.
+                // If item is inactive (Gray/Black), we make it Active (White) to flash.
+                const flashClass = item.classList.contains('active') ? 'flash-invert' : 'flash-active';
+                
+                // Stagger start time for "going down one by one" effect
+                const startDelay = index * 150; // Fast ripple
+
+                // Flash 1 ON
+                setTimeout(() => item.classList.add(flashClass), startDelay);
+                // Flash 1 OFF
+                setTimeout(() => item.classList.remove(flashClass), startDelay + 150);
+                // Flash 2 ON
+                setTimeout(() => item.classList.add(flashClass), startDelay + 300);
+                // Flash 2 OFF
+                setTimeout(() => item.classList.remove(flashClass), startDelay + 450);
+            });
+
+            // Show Toast pointing to sidebar
+            if (toast && sidebar) {
+                // Position toast next to the sidebar
+                const sidebarWidth = sidebar.getBoundingClientRect().width;
+                toast.style.left = `${sidebarWidth + 20}px`;
+                // Position near the top of the nav list
+                toast.style.top = '130px'; 
+                
+                // Delay toast slightly to appear during the flashing
+                setTimeout(() => {
+                    toast.classList.remove('opacity-0', '-translate-x-4');
+                }, 300);
+                
+                // Hide after a few seconds
+                setTimeout(() => {
+                    toast.classList.add('opacity-0', '-translate-x-4');
+                }, 5000);
+            }
         }
 
         // ... existing navigation functions ...
         function toggleDarkMode() {
-            const html = document.documentElement;
-            html.classList.toggle('dark');
-            const themeBtn = document.querySelector('button[onclick="toggleDarkMode()"]');
-            const isDark = html.classList.contains('dark');
-            if(isDark) {
-                themeBtn.innerHTML = '<i id="theme-icon" data-lucide="sun" class="w-5 h-5"></i>';
-            } else {
-                themeBtn.innerHTML = '<i id="theme-icon" data-lucide="moon" class="w-5 h-5"></i>';
-            }
-            lucide.createIcons();
-        }
+            particle.className = 'absolute w-6 h-6 bg-white rounded-full shadow-[0_0_20px_rgba(255,255,255,1)] transition-all ease-in-out';
+            // Set transition duration here to ensure it applies when we change positions
+            particle.style.transitionDuration = '1.5s'; 
+            particle.style.left = `${mouseX - 12}px`;
+            particle.style.top = `${mouseY - 12}px`;
+            container.appendChild(particle);
 
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('mobile-overlay');
-            if (sidebar.classList.contains('-translate-x-full')) {
-                sidebar.classList.remove('-translate-x-full');
-                overlay.classList.remove('hidden');
-            } else {
-                sidebar.classList.add('-translate-x-full');
-                overlay.classList.add('hidden');
-            }
-        }
+            // Force reflow
+            void particle.offsetWidth;
 
-        // Added module-level variable to track the timer
-        let marqueeTimeout;
-
-        function showSection(sectionId) {
-            document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active-section'));
-            const target = document.getElementById(sectionId);
-            if (target) {
-                target.classList.add('active-section');
-                document.getElementById('content-scroll-area').scrollTo({top: 0, behavior: 'smooth'});
-            }
-            
-            // Updated Marquee Logic: Instant Hiding on Exit
-            const marquees = document.getElementById('home-marquees');
-            if (marquees) {
-                if (sectionId === 'home') {
-                    // ENTERING HOME: Smooth Fade In
-                    marquees.classList.remove('hidden');
-                    
-                    // Force reflow
-                    void marquees.offsetWidth;
-                    
-                    // Trigger fade in (slow)
-                    marquees.classList.remove('opacity-0');
-                    marquees.classList.add('duration-1000'); 
-                } else {
-                    // LEAVING HOME: INSTANT HIDE
-                    // No fade out, no delay. Just gone.
-                    marquees.classList.add('hidden');
-                    marquees.classList.add('opacity-0');
-                    // Reset duration for next entry
-                    marquees.classList.remove('duration-1000');
-                }
-            }
-
-            document.querySelectorAll('.nav-item').forEach(nav => {
-                nav.classList.remove('active');
-                const i = nav.querySelector('svg') || nav.querySelector('i');
-                if(i) { i.classList.remove('text-black'); i.classList.add('text-gray-400'); }
-                nav.classList.remove('text-black'); nav.classList.add('text-gray-400');
-            });
-            const active = document.getElementById('nav-' + sectionId);
-            if (active) {
-                active.classList.add('active');
-                active.classList.remove('text-gray-400');
-                const i = active.querySelector('svg') || active.querySelector('i');
-                if(i) i.classList.remove('text-gray-400');
-            }
-            if (window.innerWidth < 1024) {
-               const sidebar = document.getElementById('sidebar');
-               if (sidebar && !sidebar.classList.contains('-translate-x-full')) toggleSidebar();
-            }
-        }
-
-        function goToConnect() {
-            showSection('about');
+            // 3. Animate to Target
             setTimeout(() => {
-                const connectSection = document.getElementById('connect-section');
-                if(connectSection) {
-                    connectSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    connectSection.classList.add('highlight-connect');
+                particle.style.left = `${targetX}px`;
+                particle.style.top = `${targetY}px`;
+                particle.style.transform = 'scale(0.5)'; // Shrink slightly as it hits
+                particle.style.opacity = '0'; // Fade out on impact
+            }, 100);
+
+            // 4. Impact & Cleanup
+            setTimeout(() => {
+                container.remove();
+
+                // Flash the Sidebar Item
+                if (targetEl) {
+                    // Flash effect
+                    targetEl.classList.add('bg-white', 'text-black');
+                    setTimeout(() => targetEl.classList.remove('bg-white', 'text-black'), 200);
+                    setTimeout(() => targetEl.classList.add('bg-white', 'text-black'), 400);
+                    setTimeout(() => targetEl.classList.remove('bg-white', 'text-black'), 600);
+                }
+
+                // Show Toast pointing to sidebar
+                const toast = document.getElementById('explore-toast');
+                if (toast) {
+                    // Position toast next to the sidebar
+                    const sidebarWidth = document.getElementById('sidebar').getBoundingClientRect().width;
+                    toast.style.left = `${sidebarWidth + 20}px`;
+                    
+                    // Align vertically with the target button
+                    toast.style.top = `${targetY - 20}px`;
+                    
+                    toast.classList.remove('opacity-0', '-translate-x-4');
+                    
+                    // Hide after a few seconds
                     setTimeout(() => {
-                        connectSection.classList.remove('highlight-connect');
-                    }, 2500);
+                        toast.classList.add('opacity-0', '-translate-x-4');
+                    }, 5000);
                 }
-            }, 300);
+
+            }, 1600); // 100ms delay + 1.5s duration
         }
 
-        function openModal(element, titleText) {
-            const thumbImg = element.querySelector('img');
-            const modal = document.getElementById('image-modal');
-            const modalImg = document.getElementById('modal-image');
-            const modalTitle = document.getElementById('modal-title');
-            
-            if(!thumbImg) return;
-
-            modalImg.src = thumbImg.src;
-            modalTitle.innerText = titleText || 'Untitled';
-
-            modal.classList.remove('hidden');
-            modal.classList.add('opacity-0');
-            
-            void modal.offsetWidth;
-
-            const startRect = thumbImg.getBoundingClientRect();
-            const destRect = modalImg.getBoundingClientRect();
-
-            const scaleX = startRect.width / destRect.width;
-            const scaleY = startRect.height / destRect.height;
-            const translateX = startRect.left - destRect.left;
-            const translateY = startRect.top - destRect.top;
-
-            modalImg.style.transition = 'none';
-            modalImg.style.transformOrigin = 'top left';
-            modalImg.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scaleX}, ${scaleY})`;
-
-            requestAnimationFrame(() => {
-                modal.classList.remove('opacity-0'); 
-
-                modalImg.style.transition = 'transform 0.5s cubic-bezier(0.2, 0, 0.2, 1)';
-                modalImg.style.transform = 'none';
-            });
-        }
-
-        function closeModal() {
-            const modal = document.getElementById('image-modal');
-            
-            modal.classList.add('opacity-0');
-            
-            setTimeout(() => {
-                modal.classList.add('hidden');
-            }, 300); 
-        }
-    </script>
-</body>
-</html>
+        // ... existing navigation functions ...
